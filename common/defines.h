@@ -1,0 +1,31 @@
+#pragma once
+
+
+//Kepler definitions
+#ifdef KEPLER
+	#define CORRELATE_BLOCK_SIZE 512
+	#define DIPOLE_BLOCK_SIZE 128
+	#define MAX_STREAMS 32
+#else
+	#define CORRELATE_BLOCK_SIZE 512
+	#define DIPOLE_BLOCK_SIZE 128
+	#define MAX_STREAMS 16
+#endif
+
+//Math constants
+
+//#define DEBUG
+
+#define PI 3.14159265359
+#define AVOGNO 6.0221415e+23
+#define PLANCK 6.62606896e-27
+#define VELLGT 2.99792458e+10
+#define BOLTZ 1.380658e-16
+#define ACOEF 3.13618923e-7
+#define SQRT2 0.70710678118
+
+extern const char* extFmat_file;
+extern const char* j0eigen_filebase;
+extern const char* j0eigen_quanta_filebase;
+extern const char* j0eigen_vector_gamma_filebase;
+extern const char* j0eigen_descr_gamma_filebase;
