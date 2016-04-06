@@ -6,8 +6,7 @@
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 #include <omp.h>
-#include "../TROVE/Dipole.h"
-#include "../GPU/dipole_kernals.cuh"
+#include "Dipole.h"
 #pragma once
 
 
@@ -18,7 +17,7 @@ protected:
 	Dipole* dipole_me;
 	int dipole_blcok
 
-	
+	int max_degeneracy;	
 
 	//Basis set information
 	std::vector<int> J; 
@@ -39,9 +38,9 @@ protected:
 
 
 
-	std::vector<cudaStream_t> half_ls_stream;
-	int max_degeneracy;
-	std:vector<cudaStream_t> dot_product_omp_stream;
+	cudaStream_t half_ls_stream[MAX_STREAMS];
+
+	cudaStream_t dot_product_omp_stream[MAX_STREAMS];
 
 public :
 	GpuManager(int gpu_id,int max_degen);

@@ -22,7 +22,7 @@ private:
 public:
 	EigenVector(size_t available_memory);
 	void CacheEigenvectors(States* states);
-	void ReadVector(double* array,int J, int G, int record,size_t size);
+	bool ReadVector(double* array,int nLevel,size_t size);
 
 
 };

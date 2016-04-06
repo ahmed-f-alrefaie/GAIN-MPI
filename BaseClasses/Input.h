@@ -46,9 +46,13 @@ private:
 	std::vector<std::string> c_sym;
 	void ComputeIGammaPair();
 
+
+	//Size
+	size_t memory;
+
 public:
-	Input(int p_process_id,int p_num_processes);
-	void ReadInput(const char* filename,const char* output_filename);
+	Input();
+	virtual void ReadInput(const char* filename,const char* output_filename);
 	
 	//Getters
 	double GetZPE(){return ZPE;};
@@ -65,8 +69,8 @@ public:
 	std::vector<bool> GetISymDo(){return isym_do;};
 	std::vector<int> GetIGammaPair(){return igamma_pair;};
 	std::vector<int> GetISymPairs(){return isym_pairs;};
-	std::vector< std::vector<int> > GetQuantaLower(){ return quanta_lower;}
-	std::vector< std::vector<int> > GetQuantaUpper(){ return quanta_upper;}
+	//std::vector< std::vector<int> > GetQuantaLower(){ return quanta_lower;}
+	//std::vector< std::vector<int> > GetQuantaUpper(){ return quanta_upper;}
 	int GetMaxJ(){ return maxJ;}
 	int GetNJ(){return nJ;};
 	double GetTemperature(){return temperature;};
