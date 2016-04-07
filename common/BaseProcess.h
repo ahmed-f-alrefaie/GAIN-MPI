@@ -1,8 +1,9 @@
-#include <cstdio>
-#include <mpi.h>
-#include <cstdarg>
 
 #pragma once
+#include <mpi.h>
+#include <cstdio>
+#include <cstdarg>
+
 
 //This is inherited by every class in order to manage data between different processes
 class BaseProcess{

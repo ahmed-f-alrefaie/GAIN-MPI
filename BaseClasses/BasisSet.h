@@ -1,9 +1,9 @@
+#include "../common/defines.h"
 #include <iostream>
 #include <vector>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
-#include "../common/defines.h"
 #include "../common/Util.h"
 #include "../common/BaseProcess.h"
 

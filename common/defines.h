@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mpi.h>
+
 
 //Kepler definitions
 #ifdef KEPLER
@@ -27,9 +29,3 @@
 #define BOLTZ 1.380658e-16
 #define ACOEF 3.13618923e-7
 #define SQRT2 0.70710678118
-
-extern const char* extFmat_file;
-extern const char* j0eigen_filebase;
-extern const char* j0eigen_quanta_filebase;
-extern const char* j0eigen_vector_gamma_filebase;
-extern const char* j0eigen_descr_gamma_filebase;

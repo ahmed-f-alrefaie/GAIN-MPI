@@ -25,13 +25,13 @@ public:
 
 
 class States : public BaseProcess{
-private:
+protected:
 	int Nmodes;
 	std::vector<Eigen> eigenvalues;
 	int Neigenlevels;
 	int Neigenroots;
 	int sym_maxdegen;
-	int Nclasses;
+	int sym_nrepres
 	std::vector<int> jVals;
 	int minJ;
 	int maxJ;
@@ -41,21 +41,20 @@ private:
 	std::vector<double> freq_window;
 	std::vector<int> igamma_pair;
 	std::vector<int> isym_pairs;
-	std::vector<std::string> c_sym;
 	std::vector<double> erange;
 	std::vector<double> erange_lower;
 	std::vector<double> erange_upper;
-	std::vector< std::vector<int> >quanta_lower;
-	std::vector< std::vector<int> > quanta_upper;	
 	std::vector<double> gns;
 	int nsize_max;
 	double ZPE;
-	bool filter(double energy,int igamma);
+	bool filter_states(double energy,int igamma);
+	bool filter_lower(double energy,int igamma);
+	bool filter_upper(double energy,int igamma);
 public:
 	States(Input & input);
 	virtual void ReadStates()=0;
-	virtual bool FilterIntensity(int I, int F)=0;
-
+	bool FilterIntensity(int I, int F);
+	bool FilterLowerState(int I);
 	bool degeneracy_filter(int gammaI,int gammaF);
 	const char* branch(int jF,int jI);
 	int GetNumberStates(){return eigenvalues.size();};
