@@ -14,8 +14,8 @@
 	#define MAX_STREAMS 16
 #endif
 
-#define BYTE_TO_GIGABYTE 1000000000l
-#define BYTE_TO_MEGABYTE 1000000l
+#define GIGABYTE_TO_BYTE 1000000000l
+#define MEGABYTE_TO_BYTE 1000000l
 
 
 //Math constants

@@ -1,5 +1,7 @@
 #include <map>
 #include "../common/BaseProcess.h"
+#include "../common/BaseManager.h"
+#include "../BaseClasses/States.h"
 #include "../common/defines.h"
 #include <cstdio>
 #include "../common/Util.h"
@@ -9,19 +11,31 @@
 struct vector_info{
  	double* start;
 	size_t vector_size;
-}
+};
 
-class EigenVector : public BaseProcess, public BaseManager {
+class EigenVector : public BaseProcess {
 private:
 
 	int max_vector_count_mem;
+	int cached_vectors;
+	int total_vectors;
+	size_t total_vals;
+	size_t cur_vals;
+
 	//std::vector<double> vectors
 	double* vector_heap;
+	States* states;
 	std::vector<vector_info> vector_heap_information;
+	std::vector< std::vector<FILE*> > eigenvector_files;
+		
+	std::vector<int> jVals;
+	std::vector<bool> isym_do;
+	int sym_nrepres;
+	bool ReadVectorFromFile(double* array,int nLevel,size_t size);
 	//
 public:
-	EigenVector(size_t available_memory);
-	void CacheEigenvectors(States* states);
+	EigenVector(Input & input);
+	void CacheEigenvectors(States* pstates);
 	bool ReadVector(double* array,int nLevel,size_t size);
 
 

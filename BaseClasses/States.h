@@ -1,20 +1,21 @@
+#pragma once
+#include "../BaseClasses/Input.h"
+#include "../common/defines.h"
+#include "../common/BaseProcess.h"
+#include <vector>
 class EigenStates{
 public:
     int ndeg;
     int igamma;
-    std::vector<int> irec;
-    std::vector<int> iroot;
+    int irec;
+    int iroot;
     int ilevel;
     double energy;
     int jind;
     int jval;
     int krot;
     int taurot;
-    EigenStates(int maxDegen){
-	irec.resize(maxDegen);
-	iroot.resize(maxDegen);
-
-    };
+    int nsize;
     static bool sort(const EigenStates & lhs, const EigenStates & rhs)
    {
   	return lhs.energy < rhs.energy;
@@ -27,11 +28,11 @@ public:
 class States : public BaseProcess{
 protected:
 	int Nmodes;
-	std::vector<Eigen> eigenvalues;
+	std::vector<EigenStates> eigenvalues;
 	int Neigenlevels;
 	int Neigenroots;
 	int sym_maxdegen;
-	int sym_nrepres
+	int sym_nrepres;
 	std::vector<int> jVals;
 	int minJ;
 	int maxJ;
@@ -47,7 +48,7 @@ protected:
 	std::vector<double> gns;
 	int nsize_max;
 	double ZPE;
-	bool filter_states(double energy,int igamma);
+	bool filter_state(double energy,int igamma);
 	bool filter_lower(double energy,int igamma);
 	bool filter_upper(double energy,int igamma);
 public:
@@ -58,9 +59,9 @@ public:
 	bool degeneracy_filter(int gammaI,int gammaF);
 	const char* branch(int jF,int jI);
 	int GetNumberStates(){return eigenvalues.size();};
-	int GetRecord(int state,int deg){return eigenvalues.at(state).irec.at(deg);};
+	int GetRecord(int state){return eigenvalues.at(state).irec;};
 	int GetRecordLength(int state){return eigenvalues.at(state).rec_len;};
-	int GetRoot(int state,int deg){return eigenvalues.at(state).iroot.at(deg);};
+	int GetRoot(int state){return eigenvalues.at(state).iroot;};
 	double GetEnergy(int state){return eigenvalues.at(state).energy;};
 	int GetJ(int state){return eigenvalues.at(state).jval;};
 	int GetJIndex(int state){return eigenvalues.at(state).jind;};

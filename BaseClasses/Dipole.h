@@ -1,5 +1,6 @@
 #include "../common/defines.h"
 #include "../common/BaseProcess.h"
+#include "../common/BaseManager.h"
 #include <vector>
 #include <cmath>
 #pragma once

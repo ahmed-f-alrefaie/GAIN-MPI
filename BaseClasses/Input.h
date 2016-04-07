@@ -1,4 +1,6 @@
+#include "../common/defines.h"
 #include "../common/BaseProcess.h"
+#include "../common/BaseManager.h"
 #include "../common/Util.h"
 #include <fstream>
 #include <iostream>
@@ -8,7 +10,7 @@
 
 #pragma once
 class Input : public BaseProcess {
-private:
+protected:
 	double ZPE;
 	std::vector<double> erange;
 	std::vector<double> erange_lower;
@@ -28,15 +30,11 @@ private:
 	int nJ;	
 	std::string symmetry_group;
 	std::ifstream stream;
-	std::vector< std::vector<int> > quanta_lower;
-	std::vector< std::vector<int> > quanta_upper;	
 	std::vector<int> igamma_pair;
 	int nmodes;
 
-	void RemoveBrackets(char* string);
-	void ReadIntensity();
-	void HandleSymmetery();
-	std::string PrepareString(std::string line);
+
+	
 
 	//Symmetry information
 	int maxJ;
@@ -44,18 +42,21 @@ private:
 	std::vector<int> sym_degen;
 	int sym_maxdegen;
 	std::vector<std::string> c_sym;
-	void ComputeIGammaPair();
+
 
 
 	//Size
 	size_t memory;
 
 public:
-	Input();
-	virtual void ReadInput(const char* filename,const char* output_filename);
+	Input() : BaseProcess(){};
+	virtual void ReadInput(const char* filename)=0;
 	
 	//Getters
 	double GetZPE(){return ZPE;};
+
+	size_t GetGlobalMemory(){return memory;};
+
 	std::vector<double> GetErange(){return erange;};
 	std::vector<double> GetErangeLower(){return erange_lower;};
 	std::vector<double> GetErangeUpper(){return erange_upper;};
@@ -65,7 +66,6 @@ public:
 	std::vector<int> GetSymmetryDegen(){return sym_degen;};
 	int GetNSym(){ return sym_nrepres;};
 	int GetSymMaxDegen(){return sym_maxdegen;} ;
-	std::vector<std::string> GetCSym(){return c_sym;};
 	std::vector<bool> GetISymDo(){return isym_do;};
 	std::vector<int> GetIGammaPair(){return igamma_pair;};
 	std::vector<int> GetISymPairs(){return isym_pairs;};
