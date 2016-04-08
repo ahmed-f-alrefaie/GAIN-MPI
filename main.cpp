@@ -25,9 +25,20 @@ int main(int argc, char** argv){
 	TroveBasisSet basisSetj0(0,troveinput.GetNSym(),troveinput.GetSymmetryDegen());
 	TroveBasisSet basisSetj1(1,troveinput.GetNSym(),troveinput.GetSymmetryDegen());
 
+	
+
 
 	basisSetj0.Initialize();
 	basisSetj1.Initialize();
+
+	std::vector<int> TryNTot = basisSetj1.GetNtotal();
+	for(int i = 0; i < TryNTot.size(); i++){
+
+		printf("%i\n",TryNTot[i]);
+
+	}
+
+	printf("DimenMax: %i\n",BasisSet::GetDimenMax());
 	MPI_Finalize();
 	
 

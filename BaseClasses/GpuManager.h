@@ -21,9 +21,10 @@ struct GpuBasisSet{
 
 struct GpuInflation{
 	int* ijTerms;
-	int* N;
+	int * contr;
+	std::vector<int*> N;
 	int sDeg;
-	int 
+	
 };
 
 
@@ -34,46 +35,51 @@ protected:
 	int nprocs
 
 	Dipole* dipole_me;
-	int dipole_block
+	int dipole_block	
+
 	
-	int max_degeneracy;	
 
 	//Basis set information
 	std::vector<GpuBasisSet> basisSets;
 	std::vector<GpuInflation> inflationData;	
 	
+	double* host_vectorI;
 	//Our contracted vectors for each omp_thread
-	std:vector<double*> vectorF;
-
+	std:vector<double*> host_vectorF;
 	//Our primitive expanded vectors for each omp_thread
 	std:vector<double*> prim_vectorsF;
 
-	double* vectorI
+	double* vectorI;
+	
 	std:vector<double*> prim_half_ls_vectors;
 	std:vector<double*> half_ls_vector;
 	
 	int NsizeMax;
 	int DimenMax;
-	int max_degen;
-	int sym_nrepres;
+	int MaxDegen;
+	int SymNrepres;
+	int Jmax;
 
 	int Nprocs;	
 
-	cudaStream_t half_ls_stream[MAX_STREAMS];
+	std::vector<cudaStream_t>  half_ls_stream;
 	std::vector<cudaStream_t> dot_product_omp_stream;
 
 public :
-	GpuManager(int pgpu_id,int pmax_degen,int nprocs);
+	GpuManager(int pgpu_id,int nprocs);
 	void InitializeAndTransferConstants(int jmax,int sym_nrepres);
 	void TransferBasisSet(const BasisSet* basisSet);
 	void TransferInflation(int* icontr_, int* ijterm);
 	void TransferDipole(Dipole* dipole_);
 	void AllocateVectors(int nsizemax,int dimenmax);
 
+	static void PinVectorMemory(double* vector,int* n);
+	static void UnpinVectorMemory(double* vector,int* n);
 	
+	double* GetInitialVector(){return host_
 
 	void ExecuteHalfLs(double* half_ls,double * vector, int N,int indI,int indF,int idegI,int jF,int igammaI);
-	void ExecuteDotProduct(double* int indI,int indF,int idegI,int jF,int igammaI);
+	void ExecuteDotProduct(double* vector,int* n int indI,int indF,int idegI,int jF,int igammaI);
 
 
 };

@@ -20,9 +20,9 @@ protected:
     int*	iroot_correlat_j0;
     int* 	kstart;
     int*        k_block_size; 
-    
+    static int dimenMax;
 public:
-   BasisSet(int J){jval = J;}
+   BasisSet(int J);
    virtual void Initialize() = 0;
 
    int GetJval(){return jval;};
@@ -33,4 +33,5 @@ public:
    const int * GetKTau(){return ktau;};
    const int * GetKBlock(){return k_block_size;};
    const int * GetKStart(){return kstart;};
+   static int GetDimenMax(){return dimenMax;};
 };
