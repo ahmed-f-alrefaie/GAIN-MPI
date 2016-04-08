@@ -6,9 +6,9 @@
 int main(int argc, char** argv){
 
 	MPI_Init(&argc, &argv);
-	TroveDipole test_dipole(6000000000l);
+	TroveDipole test_dipole;
 	
-	test_dipole.InitDipole();
+	test_dipole.InitDipole(6000000000l);
 
 	TroveInput troveinput;
 	troveinput.ReadInput("i_0.1.0.0000.6000.0_A.inp");

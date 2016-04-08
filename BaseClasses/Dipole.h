@@ -25,9 +25,9 @@ protected:
 	size_t max_size;
 	bool block_form;
 public:		
-	Dipole(size_t avail_mem);
+	Dipole();
 
-	virtual void InitDipole()=0;
+	virtual void InitDipole(size_t avail_mem)=0;
 	//const double* GetDipole(){ return dipole_me;}
 	size_t GetDipoleSize(){ return dipole_size;}
 	size_t GetDipoleSizeBytes(){return dipole_size*sizeof(double);}

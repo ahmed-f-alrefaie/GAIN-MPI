@@ -3,8 +3,7 @@
 
 
 
-Dipole::Dipole(size_t avail_mem){
-	max_size = avail_mem;
+Dipole::Dipole(){
 	block_form = false;
 }
 

@@ -9,8 +9,8 @@
 class TroveDipole : public Dipole {
 
 public:	
-	TroveDipole(size_t mem);
-	void InitDipole();
+	TroveDipole();
+	void InitDipole(size_t avail_mem);
 
 };
 

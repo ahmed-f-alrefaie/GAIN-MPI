@@ -3,10 +3,13 @@
 #include <cstdio>
 #include <cstring>
 
-TroveDipole::TroveDipole(size_t mem) : Dipole(mem){}
+TroveDipole::TroveDipole() : Dipole(){}
 
 //Reads the dipole_ flipped
-void TroveDipole::InitDipole(){
+void TroveDipole::InitDipole(size_t avail_mem){
+
+	max_size = avail_mem;
+
 	char buff[20];
 	int imu,imu_t;
 	int ncontr_t;
@@ -80,9 +83,8 @@ void TroveDipole::InitDipole(){
 	int n_contr_block = ceil(float(ncontr_t)/float(num_blocks));
 	int cur_block_size = 0;
 	int startF=0,endF=0,ncontrF=0;
-	//Allocate X parts
-	//dipole_block.dip_block=new FDipole_block[parts];
-	//dipole_block.parts=parts;	
+
+	//Trove creates dipoles in reversed order so we need to flip them
 	Log("Flipping dipole...and blocking into %i pieces\n",num_blocks);
 	for(int blocks = 0; blocks < num_blocks; blocks++){
 		startF=blocks*n_contr_block;
