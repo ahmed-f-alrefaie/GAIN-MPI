@@ -22,6 +22,7 @@
 
 //#define DEBUG
 
+#define WARP_SIZE 32
 #define PI 3.14159265359
 #define AVOGNO 6.0221415e+23
 #define PLANCK 6.62606896e-27

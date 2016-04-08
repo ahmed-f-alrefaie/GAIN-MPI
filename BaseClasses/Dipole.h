@@ -39,6 +39,7 @@ public:
 	int GetDipoleNcontr(int block){ return dipole_me.at(block).ncontrF;};
 	size_t GetDipoleSize(int block){ return dipole_me.at(block).size;};
 	size_t GetMaxContracts(){ return MaxContracts;};
+	virtual void CleanUp();
 	~Dipole();
 
 };

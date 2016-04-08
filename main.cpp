@@ -1,6 +1,7 @@
 #include "TroveClasses/TroveDipole.h"
 #include "TroveClasses/TroveInput.h"
 #include "TroveClasses/TroveStates.h"
+#include "TroveClasses/TroveBasisSet.h"
 #include "BaseClasses/EigenVector.h"
 int main(int argc, char** argv){
 
@@ -19,8 +20,14 @@ int main(int argc, char** argv){
 	EigenVector eigen(troveinput);
 
 	eigen.CacheEigenvectors(&troveStates);
+	
+
+	TroveBasisSet basisSetj0(0,troveinput.GetNSym(),troveinput.GetSymmetryDegen());
+	TroveBasisSet basisSetj1(1,troveinput.GetNSym(),troveinput.GetSymmetryDegen());
 
 
+	basisSetj0.Initialize();
+	basisSetj1.Initialize();
 	MPI_Finalize();
 	
 

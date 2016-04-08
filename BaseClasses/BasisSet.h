@@ -1,3 +1,4 @@
+#pragma once
 #include "../common/defines.h"
 #include <iostream>
 #include <vector>
@@ -13,22 +14,23 @@ class BasisSet : public BaseProcess
 protected:
     int 	jval;
     int 	max_deg_size;
-    int 	dimen;
+    int 	Maxcontracts;
     int* 	ktau;
     int* 	k;
-    int*	vib_index;
-    int* 	ktau;
+    int*	iroot_correlat_j0;
     int* 	kstart;
-    static TO_BasisSet* j0Basis;
-
+    int*        k_block_size; 
     
 public:
-   TO_BasisSet(int pid,int max_pros,int J);
+   BasisSet(int J){jval = J;}
    virtual void Initialize() = 0;
 
-   const int GetJval(){return jval;};
-   const int GetMaxDegSize(){return max_deg_size;};
-   const int GetDimensions(){return Maxcontracts;};
-   const int * vib_index(){return iroot_correlat_j0;};
+   int GetJval(){return jval;};
+   int GetMaxDegSize(){return max_deg_size;};
+   int GetDimensions(){return Maxcontracts;};
+   const int * GetVibIndex(){return iroot_correlat_j0;};
    const int * GetK(){return k;};
+   const int * GetKTau(){return ktau;};
+   const int * GetKBlock(){return k_block_size;};
+   const int * GetKStart(){return kstart;};
 };
