@@ -29,9 +29,10 @@ void EigenVector::CacheEigenvectors(States* pstates){
 			eigenvector_files.back().push_back(NULL);
 			if(!isym_do[g])
 				continue;
-			Log("Opening files for %d,%d\n",j,g);
+			
 			//We open it
 			sprintf(filename,"j0eigen_vectors%d_%d.chk",jVals[j],g+1);
+			Log("Opening %s\n",filename);
 			eigenvector_files.back().back() = fopen(filename,"rb");
 			if(eigenvector_files.back().back() == NULL){
 				Log("Could not open %s!!\n",filename);
@@ -61,6 +62,7 @@ void EigenVector::CacheEigenvectors(States* pstates){
 		int gamma = states->GetGamma(i);
 		int record = states->GetRecord(i);
 		int rec_len = states->GetRecordLength(i);
+		
 		total_vectors++;
 		//Can we fit it?
 		if(cur_vals + rec_len > total_vals)
@@ -69,12 +71,12 @@ void EigenVector::CacheEigenvectors(States* pstates){
 		//Otherwise we can continue
 
 		//Read
-		fseek(eigenvector_files[jInd][gamma],record,SEEK_SET);
+		fseek(eigenvector_files[jInd][gamma],size_t(record)*size_t(rec_len)*sizeof(double),SEEK_SET);
 		
 		fread(heap_ptr,sizeof(double),size_t(rec_len),eigenvector_files[jInd][gamma]);
 		//Put the information
 		vector_heap_information.push_back({heap_ptr,rec_len});
-
+		//printf("[%i,%i] Heap: %p Record: %i Record_length: %i\n",jInd,gamma,vector_heap_information.back().start,record,vector_heap_information.back().vector_size);
 		//Increment the pointer
 		heap_ptr+=rec_len;
 		//Count the cache
@@ -97,36 +99,35 @@ void EigenVector::CacheEigenvectors(States* pstates){
 
 }
 
-bool EigenVector::ReadVectorFromFile(double* array,int nLevel,size_t size){
+void EigenVector::ReadVectorFromFile(double* array,int nLevel,size_t size){
 
 		int jInd = states->GetJIndex(nLevel);
 		int gamma = states->GetGamma(nLevel);
 		int record = states->GetRecord(nLevel);
 		int rec_len = states->GetRecordLength(nLevel);
 		//Otherwise we can continue
-		fseek(eigenvector_files[jInd][gamma],record,SEEK_SET);
+		fseek(eigenvector_files[jInd][gamma],record*size_t(rec_len)*sizeof(double),SEEK_SET);
 		
 		fread(array,sizeof(double),size_t(rec_len),eigenvector_files[jInd][gamma]);	
 
-
+		
 
 
 }
 
 
 
-bool EigenVector::ReadVector(double* array,int nLevel,size_t size){
+int EigenVector::ReadVector(double* array,int nLevel,size_t size){
 	
-	if (nLevel % m_num_processes != m_process_id){
-		return false;
+	int which_proc = nLevel % m_num_processes;
 
-	}else{
-
+	if (which_proc  == m_process_id){
+		
 		int level=nLevel/m_num_processes;
 
 		if(level < cached_vectors){
 			//Read from file
-			return ReadVectorFromFile(array,nLevel,size);
+			ReadVectorFromFile(array,nLevel,size);
 		
 		}else{
 			if(size != vector_heap_information[level].vector_size){
@@ -134,12 +135,15 @@ bool EigenVector::ReadVector(double* array,int nLevel,size_t size){
 				exit(0);
 			}
 			memcpy(array,vector_heap_information[level].start,size_t(vector_heap_information[level].vector_size)*sizeof(double));
-			return true;
 		
 		}
-
+//
 
 	}
+
+	return which_proc;
+
+
 
 }
 

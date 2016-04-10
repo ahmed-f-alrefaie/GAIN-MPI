@@ -31,12 +31,12 @@ private:
 	std::vector<int> jVals;
 	std::vector<bool> isym_do;
 	int sym_nrepres;
-	bool ReadVectorFromFile(double* array,int nLevel,size_t size);
+	void ReadVectorFromFile(double* array,int nLevel,size_t size);
 	//
 public:
 	EigenVector(Input & input);
 	void CacheEigenvectors(States* pstates);
-	bool ReadVector(double* array,int nLevel,size_t size);
+	int ReadVector(double* array,int nLevel,size_t size);
 
 
 };

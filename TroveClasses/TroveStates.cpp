@@ -88,7 +88,7 @@ void TroveStates::ReadJGStates(int jVal,int gamma,int jInd){
 				int irec = strtol(line.c_str(),&line_ptr,0)-1;//irec
 				int igamma = strtol(line_ptr,&line_ptr,0)-1; //igamma
 				if((igamma) != gamma){
-					Log("Gammas dont match what the fuck bro\n");
+					Log("Gammas dont match\n");
 					exit(0);
 				}
 				int ilevel = strtol(line_ptr,&line_ptr,0)-1; //ilevel

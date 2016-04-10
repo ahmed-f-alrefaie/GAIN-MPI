@@ -1,10 +1,69 @@
 #include "GpuManager.h"
+#include <cmath>
 
 extern "C" double c_three_j(int * j1,int * j2,int * j3,int * k1,int * k2,int * k3);
 
+
+//Ported trove's three_j subroutine [moltype.f90]
+double three_j(int j1,int j2,int j3,int k1,int k2,int k3)
+{
+
+	/*
+	int newmin,newmax,_new,iphase;
+	double a,b,c,al,be,ga,delta,clebsh,minus;
+        double term,term1,term2,term3,summ,dnew,term4,term5,term6;
+        
+      	a = j1;
+      	b = j2;
+      	c = j3;
+      	al= k1;
+      	be= k2;
+      	ga= k3;
+
+      	double three_j=0.0;
+      	
+      	if(c > a+b) return three_j;
+        if(c < abs(a-b)) return three_j;
+        if(a < 0.0 || b < 0.0 || c < 0.0) return three_j;
+        if(a < abs(al) || b < abs(be) || c < abs(ga)) return three_j;
+        if(-1.0*ga != al+be) return three_j;
+      	
+      	delta=sqrt(fakt(a+b-c)*fakt(a+c-b)*fakt(b+c-a)/fakt(a+b+c+1.0));     
+      	term1=fakt(a+al)*fakt(a-al);
+      	term2=fakt(b-be)*fakt(b+be);
+      	term3=fakt(c+ga)*fakt(c-ga);
+      	term=sqrt((2.0*c+1.0)*term1*term2*term3);
+      	
+      	newmin=NINT(max(max((a+be-c),(b-c-al)),0.0));
+        newmax=NINT(min(min((a-al),(b+be)),(a+b-c))) ;       
+        
+        summ=0;
+        
+        for(_new=newmin; _new <=newmax; _new++)
+        {
+        	dnew=double(_new);
+        	term4=fakt(a-al-dnew)*fakt(c-b+al+dnew);
+        	term5=fakt(b+be-dnew)*fakt(c-a-be+dnew);
+        	term6=fakt(dnew)*fakt(a+b-c-dnew);
+        	summ+=pow(-1.0,_new)/(term4*term5*term6);
+        }
+        
+         clebsh=delta*term*summ/sqrt(10.0);
+         
+         iphase=NINT(a-b-ga);
+      	 minus = -1.0;
+      	if (iphase%2==0) minus = 1.0;
+      	three_j=minus*clebsh/sqrt(2.0*c+1.0);
+      	
+      	return three_j;
+	*/
+	return c_three_j(&j1,&j2,&j3,&k1,&k2,&k3);
+        
+};
+
 GpuManager::GpuManager(int pgpu_id,int nprocs) : BaseProcess(), BaseManager(), gpu_id(pgpu_id), Nprocs(nprocs){
-
-
+	Log("GPUManager Init with ID: %i and Nprocs: %i\n",gpu_id,Nprocs);
+	hls_stream_id = 0;
 
 }
 
@@ -27,6 +86,7 @@ void GpuManager::TransferToGpu(void* dst,const void* src,size_t size){
 		if(cudaSuccess != cudaMemcpy(dst,src,size,cudaMemcpyHostToDevice)){
 			CheckCudaError("Memory Transfer H -> D");
 		}
+		
 }
 
 void GpuManager::TransferToHost(void* dst,const void* src,size_t size){
@@ -87,21 +147,19 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 	//Transfer threeJ symbols
 	double* tmp_three_J  = new double[(jmax+1)*(jmax+1)*3*3];
 
+	for(int i =0; i < (jmax+1)*(jmax+1)*3*3; i++)
+		tmp_three_J[i]=0.0;
+
         for(int jI=0; jI <= jmax; jI++)
 		for(int jF=std::max(jI-1,0); jF <= std::min(jI+1,jmax); jF++)
 			for(int kI=0; kI <= jI; kI++)
 				for(int kF=std::max(kI-1,0); kF <= std::min(kI+1,jF); kF++)
 				{
-					int dum_one = 1;
-					int dum_diff = kF-kI;
-					int dum_nK = -kF;
-					//printf("%i %i %i %i\n",jI,kI,jF-jI,kF-kI);
-					//printf("Array position = %i\n",jI + kI*(jmax+1) +(jF-jI + 1)*(jmax+1)*(jmax+1) +  (kF-kI + 1)*(jmax+1)*(jmax+1)*3);
-					//threej(jI, kI, jF - jI, kF - kI) = three_j(jI, 1, jF, kI, kF - kI, -kF)
-					double three = c_three_j(&jI, &dum_one , &jF, &kI, &dum_diff, &dum_nK); 
+
+					double three = three_j(jI, 1, jF, kI, kF - kI, -kF);
 					//printf("(%i,%i,%i,%i) = %14.3E\n",jI,jF,kI,kF,three);
 					tmp_three_J[jI + kI*(jmax+1) +(jF-jI + 1)*(jmax+1)*(jmax+1) +  (kF-kI + 1)*(jmax+1)*(jmax+1)*3] = three;
-					//printf("three-j[%i,%i,%i,%i] = %12.6f\n",jI,jF,kI,kF,three_j(jI, 1, jF, kI, kF - kI, -kF));
+					printf("three-j[%i,%i,%i,%i] = %12.6f\n",jI,jF,kI,kF,tmp_three_J[jI + kI*(jmax+1) +(jF-jI + 1)*(jmax+1)*(jmax+1) +  (kF-kI + 1)*(jmax+1)*(jmax+1)*3]);
 				}	
 	
 	AllocateGpuMemory((void**)&threejsymbols,sizeof(double)*size_t((jmax+1)*(jmax+1)*3*3));
@@ -112,6 +170,16 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 	copy_symmetry_constants(SymNrepres,MaxDegen);
 	copy_jmax_constant(Jmax);
 
+	Log("Initializing cuBlas..");
+	stat = cublasCreate(&handle);
+	if (stat != CUBLAS_STATUS_SUCCESS) {
+		Log ("CUBLAS initialization failed\n");
+		exit(0);
+	}
+
+	cublasSetPointerMode(handle,CUBLAS_POINTER_MODE_DEVICE);
+
+	Log("success!!\n");
 
 	CheckCudaError("Initialization");
 
@@ -148,6 +216,7 @@ void GpuManager::TransferBasisSet(BasisSet* basisSet){
 
 	//We need the starting K information here
 	tmp_bset.KStart.assign(basisSet->GetKStart(),basisSet->GetKStart()+tmp_bset.J +1);
+	tmp_bset.host_KBlock.assign(basisSet->GetKBlock(),basisSet->GetKBlock()+tmp_bset.J +1);
 
 	//Now lets put everything nicely here
 	basisSets.push_back(tmp_bset);
@@ -243,6 +312,9 @@ void GpuManager::TransferInflation(int* icontr_, int* ijterm,int dimen,int maxsy
 		TransferToGpu(tmp_inflate.repres.back(),repres[i],sizeof(double)*tmp_inflate.sDeg[i]*tmp_inflate.Ntotal[i]*matsize);
 	}
 	
+
+	tmp_inflate.sDeg = sym_degen;
+	inflationData.push_back(tmp_inflate);
 	Log("done!\n");
 	
 	CheckCudaError("Transfer Inflation");
@@ -282,12 +354,82 @@ void GpuManager::TransferDipole(Dipole* dipole_,int block){
 	
 }
 
+void GpuManager::UpdateHalfLinestrength(double* half_ls,int jInd,int ideg){
+	TransferToGpu(half_ls_vectors[jInd][ideg],half_ls,sizeof(double)*DimenMax);
+
+
+}	
+
+void GpuManager::UpdateEigenVector(){
+	TransferToGpu(vectorI,host_vectorI,sizeof(double)*size_t(NsizeMax));
+}
+void GpuManager::UpdateEigenVector(int proc_id){
+	cudaSetDevice(gpu_id);
+	cudaMemcpyAsync(vectorF[proc_id],host_vectorF[proc_id],sizeof(double)*size_t(NsizeMax),cudaMemcpyHostToDevice,dot_product_omp_stream[proc_id]);
+}
+
+
+void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int igammaI){
+	cudaSetDevice(gpu_id);
+
+	//transform to primitive
+	transform_vector_primitive(basisSets[indI].dimensions,igammaI,inflationData[indI].MaxSymCoeffs,idegI,inflationData[indI].sDeg[igammaI],inflationData[indI].Ntotal[igammaI],inflationData[indI].ijTerms, inflationData[indI].contr,inflationData[indI].N[igammaI],inflationData[indI].repres[igammaI], vectorI,prim_half_ls_vectors[indF][idegI],0);
+	
+	//Wait will replace with an event
+	cudaDeviceSynchronize();
+	CheckCudaError("Transformation");
+
+	for(int kF=0; kF < basisSets[indF].J+1; kF++){
+	//Do Half_linestrength
+		compute_gpu_half_linestrength_(
+						basisSets[indF].host_KBlock[kF],
+						basisSets[indI].dimensions,
+
+						basisSets[indI].J,
+						basisSets[indF].J,
+	
+						kF,
+					
+						basisSets[indI].KTau,
+						basisSets[indF].KTau, 
+
+						basisSets[indI].vib_index,
+						basisSets[indF].vib_index,
+
+						basisSets[indF].KStart[kF],
+						basisSets[indI].KStart[std::max(kF-1,0)],
+
+						dipole_me->GetDipoleStart(0),
+						dipole_me->GetDipoleEnd(0),
+						dipole_me->GetDipoleNcontr(0),
+						basisSets[indF].host_KBlock[kF],
+						basisSets[indI].Kblock_size,
+
+						gpu_dipole,
+						prim_half_ls_vectors[indF][idegI],
+						threejsymbols,
+						half_ls_vectors[indF][idegI],
+						half_ls_stream[GetHStreamId()]);
 	
 
-void GpuManager::ExecuteHalfLs(double* half_ls,double * vector, int N,int indI,int indF,int idegI,int jF,int igammaI){
-	cudaSetDevice(gpu_id);
+	}
+
+	
+	cudaDeviceSynchronize();
+	CheckCudaError("Half line strength");
+	TransferToHost(half_ls,half_ls_vectors[indF][idegI],sizeof(double)*size_t(DimenMax));
+	cudaDeviceSynchronize();
 
 }
-void GpuManager::ExecuteDotProduct(double* vector,int N, int indI,int indF,int idegI,int jF,int igammaI,int proc,double* ls){
+void GpuManager::ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int proc){
 	cudaSetDevice(gpu_id);
+	//Transform to primitive
+	transform_vector_primitive(basisSets[indF].dimensions,igammaF,inflationData[indF].MaxSymCoeffs,idegF,inflationData[indF].sDeg[igammaF],inflationData[indF].Ntotal[igammaF],inflationData[indF].ijTerms, inflationData[indF].contr,inflationData[indF].N[igammaF],inflationData[indF].repres[igammaF], vectorF[proc],prim_vectorF[proc],dot_product_omp_stream[proc]);
+	//do dot product
+	cublasSetStream(handle,dot_product_omp_stream[proc]);
+	cublasDdot (handle, basisSets[indF].dimensions,prim_vectorF[proc], 1, half_ls_vectors[indF][idegI], 1, linestrength[proc] + idegI + idegF*MaxDegen );
+	//Copy result to host
+	cudaMemcpyAsync(host_linestrength[proc] + idegI + idegF*MaxDegen, linestrength[proc] + idegI + idegF*MaxDegen,sizeof(double),cudaMemcpyDeviceToHost,dot_product_omp_stream[proc]);
+
+
 }

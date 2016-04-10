@@ -4,6 +4,7 @@
 #include "TroveClasses/TroveBasisSet.h"
 #include "BaseClasses/EigenVector.h"
 #include "BaseClasses/GpuManager.h"
+#include "common/Timer.h"
 #include <omp.h>
 #include <vector>
 #include <cstring>
@@ -12,12 +13,15 @@ int main(int argc, char** argv){
 	MPI_Init(&argc, &argv);
 
 	int rank;
+	int nProcs;
 	bool quit_prog = false;
-	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 
+	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+	MPI_Comm_size(MPI_COMM_WORLD,&nProcs);	
 	char input_filename[1024];
 
 	int omp_threads = omp_get_max_threads();
+	int nJ;
 
 	printf("OMP_NUM_THREADS=%i\n",omp_threads);
 
@@ -62,6 +66,8 @@ int main(int argc, char** argv){
 	m_input = new TroveInput();
 	m_input->ReadInput(input_filename);
 
+	nJ = m_input->GetNJ();
+
 	//ReadStates
 	
 	m_states = new TroveStates((*m_input));
@@ -87,6 +93,10 @@ int main(int argc, char** argv){
 
 		
 	}
+
+	int DimenMax = BasisSet::GetDimenMax();
+
+
 	//Alocate needed vectors
 	m_gpu->AllocateVectors(m_input->GetNJ(),m_states->GetNSizeMax(),BasisSet::GetDimenMax());
 
@@ -99,17 +109,166 @@ int main(int argc, char** argv){
 
 	m_dipole->RemoveDipole();
 
+
+
+	int num_initial;
+	int num_trans;
+	int max_trans;
+	
+
+	m_states->GetTransitionDetails(num_initial, num_trans,max_trans);
+
+	
+	int nLevels = m_states->GetNumberStates();
+
+	double* vector_I = m_gpu->GetInitialVector();
+	
+
+	std::vector< std::vector<double*> > half_linestrength;
+
+	for(int i = 0; i < nJ; i++){
+
+		half_linestrength.push_back(std::vector<double*>());
+
+		for(int idegI = 0; idegI < m_input->GetSymMaxDegen(); idegI++){
+			half_linestrength.back().push_back(NULL);
+			half_linestrength.back().back() = new double[DimenMax];
+			BaseManager::TrackGlobalMemory(sizeof(double)*BasisSet::GetDimenMax());
+			
+		}
+	}
+
 	eigen = new EigenVector((*m_input));
 
 	eigen->CacheEigenvectors(m_states);
 
+	printf("-------------------------------------Begin Intensity Calculation----------------------------\n");
 	
+	for(int iLevelI = 0; iLevelI < nLevels; iLevelI++){
+		
+		//All MPI processes should do this
+		if(!m_states->FilterLowerState(iLevelI))
+			continue;
+
+		int jI= m_states->GetJ(iLevelI);
+		int gammaI = m_states->GetGamma(iLevelI);
+		int nSizeI = m_states->GetRecordLength(iLevelI);
+		int ndegI = m_states->GetNdeg(iLevelI); 
+		int indI =  m_states->GetJIndex(iLevelI);
+		double energyI = m_states->GetEnergy(iLevelI);
+		
+		int expected_process = eigen->ReadVector(vector_I,iLevelI,nSizeI);
+		
+		m_gpu->UpdateEigenVector();
+
+		Timer::getInstance().StartTimer("Half linestrength");
+		for(int indF = 0; indF < nJ; indF++){
+
+			if(!m_states->FilterAnyTransitionsFromJ(iLevelI,m_jvals[indF]))
+				continue;
+
+			for(int idegI = 0; idegI < ndegI; idegI++){			
+				if(expected_process == rank){
+					//Do halflinestrength
+					m_gpu->ExecuteHalfLs(half_linestrength[indF][idegI],indI,indF,idegI,gammaI);
+				
+				}
+				
+				
+
+			
+
+				//Broadcast
+				MPI_Bcast(half_linestrength[indF][idegI], DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
+				//Update our gpu
+				
+				m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
+
+
+				
+			
+
+			}
+
+		}
+
+	
+		Timer::getInstance().EndTimer("Half linestrength");
+
+		Timer::getInstance().StartTimer("Intensity Loop");
+		int tran = 0;
+		#pragma omp parallel for
+		for(int iLevelF=rank; iLevelF < nLevels; iLevelF+=nProcs){
+
+			if(!m_states->FilterIntensity(iLevelI,iLevelF))
+				continue;
+	
+			tran++;
+			int thread_id = omp_get_thread_num();
+
+			int jF= m_states->GetJ(iLevelF);
+			int gammaF = m_states->GetGamma(iLevelF);
+			int nSizeF = m_states->GetRecordLength(iLevelF);
+			int ndegF = m_states->GetNdeg(iLevelF); 
+			int indF =  m_states->GetJIndex(iLevelF);
+			double energyF = m_states->GetEnergy(iLevelF);
 
 
 
+			double* vector_F = m_gpu->GetFinalVector(thread_id);
+			double* linestrength = m_gpu->GetLinestrength(thread_id);
+
+			if(rank != eigen->ReadVector(vector_F,iLevelF,nSizeF)){
+				printf("Error!!!!\n");
+				exit(0);
+			}
 
 
+			//Do work
+			//Output result
+			m_gpu->UpdateEigenVector(thread_id);
 
+			for(int idegF = 0; idegF < ndegF; idegF++)
+				for(int idegI = 0; idegI < ndegI; idegI++)
+					m_gpu->ExecuteDotProduct(indF,idegI,idegF,gammaF,thread_id);
+
+			m_gpu->WaitForLineStrengthResult(thread_id);
+
+			double linestr,ls; 
+			ls = 0.0;
+
+			
+			for(int idegF=0; idegF < ndegF; idegF++){
+				for(int idegI=0; idegI < ndegI; idegI++){
+					linestr = linestrength[idegI + idegF*m_input->GetSymMaxDegen()];
+					
+					ls +=(linestr*linestr);
+				}
+			}
+
+			
+
+			ls/=double(ndegI);
+
+			double nu_if = energyF - energyI;
+
+			double A_einst = ACOEF*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
+
+
+			printf("%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E\n",nu_if,iLevelF+1,jF,gammaF+1,iLevelI+1,jI,gammaI+1,A_einst);
+
+
+			
+
+		}
+		Timer::getInstance().EndTimer("Intensity Loop");
+
+
+	}
+	
+	if(rank==0){
+		Timer::getInstance().PrintTimerInfo();
+	}
 
 
 /*

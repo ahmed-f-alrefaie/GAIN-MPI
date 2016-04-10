@@ -26,7 +26,7 @@ States::States(Input & input): BaseProcess(){
 	sym_nrepres = input.GetNSym();
 	erange=input.GetErange();
 	erange_lower =input.GetErangeLower();
-	erange_upper =input.GetErangeLower();
+	erange_upper =input.GetErangeUpper();
 	ZPE = input.GetZPE();
 	freq_window = input.GetFreqWindow();
 	isym_pairs = input.GetISymPairs();
@@ -43,16 +43,47 @@ bool States::filter_state(double energy,int igamma){
 
 }
 bool States::filter_lower(double energy,int igamma){
-	return (energy - ZPE) <= erange_lower[1] && (energy - ZPE) >= erange_lower[0] && isym_do[igamma] > 0.0;
+	return (energy - ZPE) <= erange_lower[1] && (energy - ZPE) >= erange_lower[0] && isym_do[igamma];
 }
 bool States::filter_upper(double energy,int igamma){
-	return (energy - ZPE) <= erange_upper[1] && (energy - ZPE) >= erange_upper[0] && isym_do[igamma] > 0.0;
+	return (energy - ZPE) <= erange_upper[1] && (energy - ZPE) >= erange_upper[0] && isym_do[igamma];
 
 
 }
 bool States::FilterIntensity(int I, int F){
+	const EigenStates* eig_i = &eigenvalues.at(I);
+	const EigenStates* eig_f = &eigenvalues.at(F);
+	int gammaI = eig_i->igamma;
+	int gammaF = eig_f->igamma;
+	double nu_if = eig_f->energy - eig_i->energy;
+//	Log("%12.6f %12.6f %d %d %12.6f <-  %12.6f %d %d %12.6f \n",nu_if,eig_f->energy,eig_f->jval,gammaF,gns[gammaF],eig_i->energy,eig_i->jval,gammaI,gns[gammaI]);
+	int jI = eig_i->jval;
+	int jF = eig_f->jval;
+	return  gns[gammaI]> 0.0 &&
+		gns[gammaF] > 0.0 &&
+		nu_if >= freq_window[0] &&
+		nu_if <= freq_window[1] &&
+		filter_lower(eig_i->energy,gammaI) &&
+		filter_upper(eig_f->energy,gammaF) &&
+		isym_pairs[gammaI]==isym_pairs[gammaF] &&
+		igamma_pair[gammaI]==gammaF &&
+		abs(jF-jI)<=1		    &&
+		jI+jF >=1;
+		
+
 }
 bool States::FilterAnyTransitionsFromJ(int I, int J){
+
+	for(int ilevelF=0; ilevelF < Neigenlevels; ilevelF++){
+		if(eigenvalues.at(ilevelF).jval != J)
+			continue;
+
+		if(FilterIntensity(I, ilevelF))
+			return true;
+
+	}
+	return false;
+
 }
 
 
@@ -70,15 +101,13 @@ void States::GetTransitionDetails(int & num_initial, int & num_trans,int & max_t
 	
 	int per_initial_states = 0;
 	Log("\n\nPredicting how many transitions to compute\n");
-/*	for(int ilevelI=0; ilevelI < Neigenlevels; ilevelI++){
+	for(int ilevelI=0; ilevelI < Neigenlevels; ilevelI++){
 
-		if(!energy_filter_lower(ilevelI)) continue;
+		if(!FilterLowerState(ilevelI)) continue;
 		per_initial_states = 0;
 		for(int ilevelF=0; ilevelF < Neigenlevels; ilevelF++){
 
-			if(!energy_filter_upper(ilevelF)) continue;
-
-			if(!intensity_filter(ilevelI,ilevelF)) continue;
+			if(!FilterIntensity(ilevelI,ilevelF)) continue;
 
 			transitions++;
 			per_initial_states++;
@@ -94,6 +123,6 @@ void States::GetTransitionDetails(int & num_initial, int & num_trans,int & max_t
 	num_initial = no_initial_states;
 	num_trans = transitions;
 	max_trans = max_trans_per_initial;
-*/
+
 
 }

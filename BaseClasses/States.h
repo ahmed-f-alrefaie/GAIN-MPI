@@ -57,6 +57,7 @@ public:
 	bool FilterIntensity(int I, int F);
 	bool FilterAnyTransitionsFromJ(int I, int J);
 	bool FilterLowerState(int I) { return filter_lower(eigenvalues.at(I).energy, eigenvalues.at(I).igamma);}
+	bool FilterUpperState(int I) { return filter_upper(eigenvalues.at(I).energy, eigenvalues.at(I).igamma);}
 	bool degeneracy_filter(int gammaI,int gammaF);
 	const char* branch(int jF,int jI);
 	int GetNumberStates(){return eigenvalues.size();};

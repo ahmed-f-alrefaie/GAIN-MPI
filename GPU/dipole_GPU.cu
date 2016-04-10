@@ -155,7 +155,7 @@ const double* dipole_me,
 const double* vector,const double*  threej,double*  half_ls,cudaStream_t stream){
 
 
-	int half_grid_size = (int)ceil((float)(kFBlocksize)/(float)DIPOLE_BLOCK_SIZE);
+	int half_grid_size = (int)ceil((float)(dimenF)/(float)DIPOLE_BLOCK_SIZE);
 				//printf("half_grid params: b:%i t:%i N:%i\n",half_grid_size,DIPOLE_BLOCK_SIZE,DIPOLE_BLOCK_SIZE*half_grid_size);
 	//device_compute_1st_half_ls_flipped_dipole_shared_nontrove<<<half_grid_size,DIPOLE_BLOCK_SIZE,0,half_ls_stream[stream_id]>>>(h_k_blocks[indF][k],dimen[indI],jI,
 	//										jF,k,tau[indI],tau[indF],icorr[indI],icorr[indF],
@@ -336,7 +336,7 @@ const double* vector,const double*  threej,double*  half_ls)
 	final_half_ls = 0.0;
 	if(irootF<startF_idx+dimenF){
 
-		icontrF =icorrF_[irootF]-1;
+		icontrF =icorrF_[irootF];
 		tauF  =  tauF_[irootF] & 1;
 	}
 
@@ -366,12 +366,12 @@ const double* vector,const double*  threej,double*  half_ls)
 				
 			if(local_idx < kBlockSize){
 				s_tauI[t_id] = tauI_[irootI];
-				s_icontrI[t_id] = icorrI_[irootI]-1;
+				s_icontrI[t_id] = icorrI_[irootI];
 
 				s_sigmaI[t_id] = (kI % 3);
 
 				//ls =f3j*vector[irootI]*(1.0 + (SQRT2 - 1.0)*double(kI_kF_zero)*(!kI_kF_eq));
-				//printf("%i ls =%14.3e f3j=%12.6f vector=%14.3e\n",t_id,ls,f3j,vector[irootI]);
+				//if(g_id==0)printf("%i ls =%14.3e f3j=%12.6f vector=%14.3e\n",t_id,ls,f3j,vector[irootI]);
 
 				ls = vector[irootI];		
 				//Will not diverge		
@@ -407,7 +407,7 @@ const double* vector,const double*  threej,double*  half_ls)
 
 					sigmaI = s_sigmaI[i]*tauI;
 					sigmaI = 2*(~(sigmaI+kI) & 1)-1;
-					final_half_ls+=ls*double(sigmaI)*dipole_me[icontrF + s_icontrI[i]*ncontrF +dipole_idx*dip_stride_1*ncontrF];
+					final_half_ls+=ls*double(sigmaI)*dipole_me[icontrF-startFblock + s_icontrI[i]*ncontrF +dipole_idx*dip_stride_1*ncontrF];
 ;//f3j;//ls;// double(sigmaI)*ls*dipole_me[icontrF + s_icontrI[i + b_start]*dip_stride_1 + dipole_idx*dip_stride_2];
 				}
 					
@@ -453,9 +453,9 @@ const double* vector,double*  half_ls)
 	bool valid = false;
 	if(irootF<dimenF){
 		valid = true;
-		icontrF =icorrF_[irootF]-1;
-		irlevelF  =  kF_[irootF]-1;
-		irdegF   = ktauF_[irootF]-1;
+		icontrF =icorrF_[irootF];
+		irlevelF  =  kF_[irootF];
+		irdegF   = ktauF_[irootF];
 	}
 
 
@@ -464,9 +464,9 @@ const double* vector,double*  half_ls)
 		irootI = b_irootI+t_id;
 		s_icontrI[t_id] = -1;		
 		if(irootI < dimenI){
-			s_icontrI[t_id]=icorrI_[irootI]-1;
-			s_irlevelI[t_id]=kI_[irootI]-1;
-			s_irdegI[t_id]=ktauI_[irootI]-1;
+			s_icontrI[t_id]=icorrI_[irootI];
+			s_irlevelI[t_id]=kI_[irootI];
+			s_irdegI[t_id]=ktauI_[irootI];
 			s_vector[t_id]=vector[irootI];
 		}
 		__syncthreads();
@@ -517,8 +517,8 @@ __global__ void device_expand_vectors(const int dimenI,const int igammaI,const i
 	
 		int irow,ib,iterm,nelem,isrootI,Ntot,sdeg;
 		double dtemp0 = 0.0;
-		irow = icontr_[irootI]-1;
-		ib = icontr_[irootI + dimenI]-1;
+		irow = icontr_[irootI];
+		ib = icontr_[irootI + dimenI];
 	
 		iterm = ijterms_[irow + igammaI*maxcoeff];
 	
@@ -531,7 +531,6 @@ __global__ void device_expand_vectors(const int dimenI,const int igammaI,const i
 		}
 	
 		vec_[irootI] = dtemp0;
-	
 	}
 
 

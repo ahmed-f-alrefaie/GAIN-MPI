@@ -18,6 +18,7 @@ struct GpuBasisSet{
 	int* Kblock_size;
 	int dimensions; 
 	std::vector<int> KStart;
+	std::vector<int> host_KBlock;
 };
 
 struct GpuInflation{
@@ -77,8 +78,10 @@ private:
 
 	int Nprocs;	
 	//Streams and events
-	std::vector<cudaStream_t>  half_ls_stream;
+	std::vector<cudaStream_t> half_ls_stream;
 	std::vector<cudaStream_t> dot_product_omp_stream;
+
+	std::vector<cudaEvent_t> correlated_event;
 
 	//whetherthe dipole has transfered
 	cudaEvent_t transfer_dipole_event;
@@ -98,6 +101,10 @@ private:
 	int GetHStreamId(){if(hls_stream_id>=MAX_STREAMS) hls_stream_id=0; return hls_stream_id++;};
 
 
+	//CublasRelated
+	cublasHandle_t handle;
+	cublasStatus_t stat;
+
 public :
 	GpuManager(int pgpu_id,int nprocs);
 	void InitializeAndTransferConstants(int jmax,int sym_repres,int pmax_degen);
@@ -109,13 +116,23 @@ public :
 
 	static void PinVectorMemory(double* vector,int* n);
 	static void UnpinVectorMemory(double* vector,int* n);
+
+
 	
 	double* GetInitialVector(){return host_vectorI;};
 	double* GetFinalVector(int proc_id){return host_vectorF.at(proc_id);};
-	
+	double* GetLinestrength(int proc_id){return host_linestrength.at(proc_id);};
 
-	void ExecuteHalfLs(double* half_ls,double * vector, int N,int indI,int indF,int idegI,int jF,int igammaI);
-	void ExecuteDotProduct(double* vector,int N, int indI,int indF,int idegI,int jF,int igammaI,int proc,double* ls);
+	void UpdateHalfLinestrength(double* half_ls,int jInd,int ideg);
+
+	void ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int igammaI);
+
+	void UpdateEigenVector();
+	void UpdateEigenVector(int proc_id);	
+
+	void ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int proc);
+
+	void WaitForLineStrengthResult(int proc_id){cudaSetDevice(gpu_id); cudaStreamSynchronize(dot_product_omp_stream[proc_id]);}
 
 	void WaitForDevice(){cudaSetDevice(gpu_id); cudaDeviceSynchronize();};
 
