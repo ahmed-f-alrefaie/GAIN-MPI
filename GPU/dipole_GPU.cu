@@ -1,13 +1,27 @@
-#include "dipole_GPU.cuh"
+#include "dipole_GPU.h"
 #include "cublas_v2.h"
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 #include <cmath>
 #include <cstdio>
 #include <vector>
-#include "../common/defines.h"
 
 //Math constants
+//Kepler definitions
+
+#define CORRELATE_BLOCK_SIZE 512
+#define DIPOLE_BLOCK_SIZE 128
+
+
+
+#define WARP_SIZE 32
+#define PI 3.14159265359
+#define AVOGNO 6.0221415e+23
+#define PLANCK 6.62606896e-27
+#define VELLGT 2.99792458e+10
+#define BOLTZ 1.380658e-16
+#define ACOEF 3.13618923e-7
+#define SQRT2 0.70710678118
 
 //#define DEBUG
 
@@ -95,20 +109,74 @@ void CheckCudaError(const char* tag){
   }
 };
 
-
-extern "C" void gpu_pin_vector_memory_(double* vector,int* n){
-	if(cudaSuccess!= cudaHostRegister(vector,sizeof(double)*size_t(*n),cudaHostAllocPortable)){
-		printf("Problem pinning vector memory!!\n");
-		exit(0);
-	}
+void copy_symmetry_constants(int sym_nrepres,int maxdeg){
+	
+	cudaMemcpyToSymbol (g_symnrepres,&sym_nrepres , sizeof(int) );
+	cudaMemcpyToSymbol (g_maxdegen,&maxdeg , sizeof(int) );
 }
 
-extern "C" void gpu_unpin_vector_memory_(double* vector){
-	if(cudaSuccess!= cudaHostUnregister(vector)){
-		printf("Problem unpinning vector memory!!\n");
-		exit(0);
-	}
+void copy_jmax_constant(int jmax){
+	cudaMemcpyToSymbol (c_jmax,&jmax , sizeof(int) );
+
 }
+
+void copy_dipole_constant(int dip_stride){
+	
+	cudaMemcpyToSymbol (dip_stride_1,&dip_stride , sizeof(int) );
+
+}
+
+
+void transform_vector_primitive(const int dimenI,const int igammaI,const int maxcoeff,const int idegI,const int sdeg,const int Ntot,const int* ijterms_, const int* icontr_,const int* N_,const double* repres_, const double* vecI_,double* vec_,cudaStream_t stream){
+
+	int gridSize = (int)ceil((float)dimenI/CORRELATE_BLOCK_SIZE);
+
+	device_expand_vectors<<<gridSize,CORRELATE_BLOCK_SIZE,0,stream>>>(
+		dimenI,
+		igammaI,
+		maxcoeff,
+		idegI,
+		sdeg,
+		Ntot,
+		ijterms_,
+		icontr_,
+		N_,
+		repres_,
+		vecI_,
+		vec_);	
+
+
+}
+
+
+void compute_gpu_half_linestrength_(const int dimenF,const int dimenI,const int jI,const int jF,
+const int kF,const int* tauI_,const int* tauF_, const int* icorrI_,const int* icorrF_,const int startF_idx,int startI_idx,const int startFblock,const int endFblock,const int ncontrF,const int kFBlocksize,const int* kblock_size_,
+const double* dipole_me,
+const double* vector,const double*  threej,double*  half_ls,cudaStream_t stream){
+
+
+	int half_grid_size = (int)ceil((float)(kFBlocksize)/(float)DIPOLE_BLOCK_SIZE);
+				//printf("half_grid params: b:%i t:%i N:%i\n",half_grid_size,DIPOLE_BLOCK_SIZE,DIPOLE_BLOCK_SIZE*half_grid_size);
+	//device_compute_1st_half_ls_flipped_dipole_shared_nontrove<<<half_grid_size,DIPOLE_BLOCK_SIZE,0,half_ls_stream[stream_id]>>>(h_k_blocks[indF][k],dimen[indI],jI,
+	//										jF,k,tau[indI],tau[indF],icorr[indI],icorr[indF],
+	//										k_start[indF][k],k_start[indI][max(k-1,0)],k_block_size[indI],
+	//										cuda_dipole_me,
+	//										corr_vector,g_threeJ,
+	//										g_half_ls[indF][ideg]);
+				//cudaDeviceSynchronize();
+	//			CheckCudaError("K-block");
+	
+	
+	device_compute_1st_half_ls_flipped_dipole_shared_block_nontrove<<<half_grid_size,DIPOLE_BLOCK_SIZE,0,stream>>>(
+	dimenF,dimenI,jI,jF,
+	kF,tauI_,tauF_,icorrI_,icorrF_,startF_idx,startI_idx,startFblock,endFblock,ncontrF,kblock_size_,
+	dipole_me,
+	vector,threej,half_ls);
+
+
+}
+
+
 
 __global__ void device_compute_1st_half_ls_flipped_dipole_shared_nontrove(
 const int dimenF,const int dimenI,const int jI,const int jF,
@@ -339,7 +407,7 @@ const double* vector,const double*  threej,double*  half_ls)
 
 					sigmaI = s_sigmaI[i]*tauI;
 					sigmaI = 2*(~(sigmaI+kI) & 1)-1;
-					final_half_ls+=ls*double(sigmaI)*dipole_me[icontrF + s_icontrI[i]*ncontrF +dipole_idx*dip_stride_2];
+					final_half_ls+=ls*double(sigmaI)*dipole_me[icontrF + s_icontrI[i]*ncontrF +dipole_idx*dip_stride_1*ncontrF];
 ;//f3j;//ls;// double(sigmaI)*ls*dipole_me[icontrF + s_icontrI[i + b_start]*dip_stride_1 + dipole_idx*dip_stride_2];
 				}
 					
@@ -474,6 +542,3 @@ void cleanup_gpu(){
 
 }
 
-
-
-int main(){}

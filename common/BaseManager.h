@@ -15,12 +15,12 @@ protected:
 		void InitializeMemory(size_t bytes);
 		void TrackMemory(size_t bytes);
 		void FreeMemory(size_t bytes);
-		size_t GetAvailableMemory();
-		size_t GetAllocatedMemory();
+
 
 public:
 	static void InitializeGlobalMemory(size_t bytes);
-	
+	size_t GetAvailableMemory();
+	size_t GetAllocatedMemory();	
 
 	static void TrackGlobalMemory(size_t bytes);
 	static void FreeGlobalMemory(size_t bytes);

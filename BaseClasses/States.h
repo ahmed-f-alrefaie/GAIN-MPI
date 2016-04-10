@@ -70,5 +70,7 @@ public:
 	int GetNdeg(int state){return eigenvalues.at(state).ndeg;};
 	void GetTransitionDetails(int & num_initial, int & num_trans,int & max_trans);
 
+	int GetNSizeMax(){return nsize_max;};
+
 
 };

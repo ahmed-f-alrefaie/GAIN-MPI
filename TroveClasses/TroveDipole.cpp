@@ -36,7 +36,8 @@ void TroveDipole::InitDipole(size_t avail_mem){
 	
 	/////////////////////////
 	
-	
+	MaxContracts = ncontr_t;
+
    	rootsize2 = ncontr_t*ncontr_t;
 	matsize = rootsize2*3;
 	dipole_size = matsize;
@@ -97,7 +98,7 @@ void TroveDipole::InitDipole(size_t avail_mem){
 		dipole_me.back().startF = startF;
 		dipole_me.back().endF = endF;
 		dipole_me.back().dipole_me = new double[ncontrF*ncontr_t*3];
-		dipole_me.back().size = sizeof(double)*size_t(ncontrF)*size_t(ncontr_t)*3l;
+		dipole_me.back().size = size_t(ncontrF)*size_t(ncontr_t)*3l;
 		BaseManager::TrackGlobalMemory(dipole_me.back().size);
 		Log("Size of block %i is %zu\n",blocks,dipole_me.back().size);
 		dipole_me.back().ncontrF = ncontrF;
