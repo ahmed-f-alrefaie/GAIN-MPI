@@ -50,7 +50,10 @@ bool States::filter_upper(double energy,int igamma){
 
 
 }
-
+bool States::FilterIntensity(int I, int F){
+}
+bool States::FilterAnyTransitionsFromJ(int I, int J){
+}
 
 
 /*bool States::degeneracy_filter(int gammaI,int gammaF){

@@ -4,17 +4,119 @@
 #include "TroveClasses/TroveBasisSet.h"
 #include "BaseClasses/EigenVector.h"
 #include "BaseClasses/GpuManager.h"
-
-
+#include <omp.h>
+#include <vector>
+#include <cstring>
 int main(int argc, char** argv){
 
 	MPI_Init(&argc, &argv);
-	TroveDipole test_dipole;
-	
-	test_dipole.InitDipole(6000000000l);
 
+	int rank;
+	bool quit_prog = false;
+	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+
+	char input_filename[1024];
+
+	int omp_threads = omp_get_max_threads();
+
+	printf("OMP_NUM_THREADS=%i\n",omp_threads);
+
+	/////////////////////Simple argument handling///////////////
+
+
+	//Lets read the arguments
+	if(rank ==0){
+		if(argc<2){
+			printf("Usage is <input file>\n");
+			quit_prog = true;
+
+		}else{
+			strcpy(input_filename,argv[1]);
+		}
+
+
+
+
+	}
+
+
+	MPI_Bcast(&quit_prog, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+	MPI_Bcast(input_filename, 1024, MPI_CHAR, 0, MPI_COMM_WORLD);
+
+	if(quit_prog){
+		MPI_Finalize();
+		return 0;
+	}
+
+	Input* m_input;
+	States* m_states;
+	std::vector<TroveBasisSet*> m_basisSets;
+	Dipole* m_dipole;
+	EigenVector* eigen;
+
+
+	
+
+
+	//Read inputs
+	m_input = new TroveInput();
+	m_input->ReadInput(input_filename);
+
+	//ReadStates
+	
+	m_states = new TroveStates((*m_input));
+	m_states->ReadStates();
+
+	std::vector<int> m_jvals = m_input->GetJvals();
+	
+	//Initialize our gpu
+	GpuManager* m_gpu = new GpuManager(0,omp_threads);
+
+	
+	m_gpu->InitializeAndTransferConstants(m_input->GetMaxJ(),m_input->GetNSym(),m_input->GetSymMaxDegen());
+
+	for(int i = 0; i < m_input->GetNJ(); i++){
+		m_basisSets.push_back(new TroveBasisSet(m_jvals[i],m_input->GetNSym(),m_input->GetSymmetryDegen()));
+		m_basisSets.back()->Initialize();
+		//Transfer to the gpu
+		m_gpu->TransferBasisSet(m_basisSets.back());
+		//Transfer inflation
+		TroveBasisSet* t_b = (TroveBasisSet*)m_basisSets.back();
+		m_gpu->TransferInflation(t_b->GetContr(), t_b->GetIJTerms(),t_b->GetDimensions(),t_b->GetMaxSymCoeffs(),
+			t_b->GetMatSize(),t_b->GetRepres(),t_b->GetRepresN(),t_b->GetNTotal(),m_input->GetSymmetryDegen());
+
+		
+	}
+	//Alocate needed vectors
+	m_gpu->AllocateVectors(m_input->GetNJ(),m_states->GetNSizeMax(),BasisSet::GetDimenMax());
+
+
+	//Handle dipole
+	m_dipole = new TroveDipole();
+	m_dipole->InitDipole(6000000000l);
+
+	m_gpu->TransferDipole(m_dipole,0);
+
+	m_dipole->RemoveDipole();
+
+	eigen = new EigenVector((*m_input));
+
+	eigen->CacheEigenvectors(m_states);
+
+	
+
+
+
+
+
+
+
+
+/*
+
+	//Read the input file
 	TroveInput troveinput;
-	troveinput.ReadInput("i_0.1.0.0000.6000.0_A.inp");
+	troveinput.ReadInput(input_filename);
 
 	TroveStates troveStates(troveinput);
 
@@ -67,6 +169,8 @@ int main(int argc, char** argv){
 
 
 	printf("DimenMax: %i\n",BasisSet::GetDimenMax());
+
+*/
 	MPI_Finalize();
 	
 
