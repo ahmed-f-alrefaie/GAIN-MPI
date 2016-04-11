@@ -144,9 +144,14 @@ int main(int argc, char** argv){
 
 	double ZPE = m_input->GetZPE();
 	
-	printf("ZPE: %12.6f \n ",ZPE);
 
-	printf("-------------------------------------Begin Intensity Calculation----------------------------\n");
+	MPI_Barrier( MPI_COMM_WORLD);
+	if(rank ==0){
+		printf("ZPE: %12.6f \n ",ZPE);
+
+		printf("-------------------------------------Begin Intensity Calculation----------------------------\n");
+	}
+	MPI_Barrier( MPI_COMM_WORLD);
 	
 	for(int iLevelI = 0; iLevelI < nLevels; iLevelI++){
 		
@@ -269,7 +274,7 @@ int main(int argc, char** argv){
 
 
 	}
-	
+	MPI_Barrier( MPI_COMM_WORLD);
 	if(rank==0){
 		Timer::getInstance().PrintTimerInfo();
 	}
