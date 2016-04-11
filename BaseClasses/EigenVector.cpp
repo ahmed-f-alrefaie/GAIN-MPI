@@ -135,7 +135,7 @@ int EigenVector::ReadVector(double* array,int nLevel,size_t size){
 		
 		int level=nLevel/m_num_processes;
 
-		if(level > cached_vectors){
+		if(level >= cached_vectors){
 			//Read from file
 			ReadVectorFromFile(array,nLevel,size);
 		
