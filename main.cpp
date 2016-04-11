@@ -265,7 +265,7 @@ int main(int argc, char** argv){
 			double A_einst = ACOEF*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
 
 
-			printf("%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E [%12.6f] || \n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,energyI-ZPE);
+			printf("[%i] %12.6f %8d %4d %4d <- %8d %4d %4d %16.8E [%12.6f] || \n",rank,nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,energyI-ZPE);
 			transitions++;
 
 			
@@ -273,6 +273,7 @@ int main(int argc, char** argv){
 		}
 		MPI_Barrier( MPI_COMM_WORLD);
 		Timer::getInstance().EndTimer("Intensity Loop");
+		fflush(0);
 		int g_transitions =0;
 		MPI_Reduce(&transitions,&g_transitions,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
 		
