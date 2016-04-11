@@ -142,6 +142,10 @@ int main(int argc, char** argv){
 
 	eigen->CacheEigenvectors(m_states);
 
+	double ZPE = m_input->GetZPE();
+	
+	printf("ZPE: %12.6f \n ",ZPE);
+
 	printf("-------------------------------------Begin Intensity Calculation----------------------------\n");
 	
 	for(int iLevelI = 0; iLevelI < nLevels; iLevelI++){
@@ -255,7 +259,7 @@ int main(int argc, char** argv){
 			double A_einst = ACOEF*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
 
 
-			printf("%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E\n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst);
+			printf("%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E [%12.6f] || \n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,energyI-ZPE);
 
 
 			
