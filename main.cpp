@@ -156,7 +156,7 @@ int main(int argc, char** argv){
 		int ndegI = m_states->GetNdeg(iLevelI); 
 		int indI =  m_states->GetJIndex(iLevelI);
 		double energyI = m_states->GetEnergy(iLevelI);
-		
+		int indexI = m_states->GetLevel(iLevelI);
 		int expected_process = eigen->ReadVector(vector_I,iLevelI,nSizeI);
 		
 		m_gpu->UpdateEigenVector();
@@ -212,7 +212,7 @@ int main(int argc, char** argv){
 			int ndegF = m_states->GetNdeg(iLevelF); 
 			int indF =  m_states->GetJIndex(iLevelF);
 			double energyF = m_states->GetEnergy(iLevelF);
-
+			int indexF = m_states->GetLevel(iLevelF);
 
 
 			double* vector_F = m_gpu->GetFinalVector(thread_id);
@@ -255,7 +255,7 @@ int main(int argc, char** argv){
 			double A_einst = ACOEF*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
 
 
-			printf("%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E\n",nu_if,iLevelF+1,jF,gammaF+1,iLevelI+1,jI,gammaI+1,A_einst);
+			printf("%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E\n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst);
 
 
 			
