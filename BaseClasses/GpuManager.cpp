@@ -61,7 +61,37 @@ double three_j(int j1,int j2,int j3,int k1,int k2,int k3)
         
 };
 
+
+int GpuManager::GetFreeDevice(){
+	int device_id=-1;
+	int devCount;
+	cudaGetDeviceCount(&devCount);
+	for(int i=0; i< devCount; i++){
+		cudaSetDevice(i);
+		if(cudaFree(0)==cudaSuccess){
+			cudaThreadExit();
+			return i;
+		}	
+	}
+
+	return -1;
+
+
+}
+
+
+
 GpuManager::GpuManager(int pgpu_id,int nprocs) : BaseProcess(), BaseManager(), gpu_id(pgpu_id), Nprocs(nprocs){
+
+
+
+	if(pgpu_id==-1){
+		gpu_id = GetFreeDevice();
+		if(gpu_id==-1){
+			printf("Error could not get device!\n");
+			exit(0);
+		}
+	}
 	Log("GPUManager Init with ID: %i and Nprocs: %i\n",gpu_id,Nprocs);
 	hls_stream_id = 0;
 

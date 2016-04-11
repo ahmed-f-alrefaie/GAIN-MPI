@@ -100,7 +100,7 @@ private:
 	int hls_stream_id;
 	int GetHStreamId(){if(hls_stream_id>=MAX_STREAMS) hls_stream_id=0; return hls_stream_id++;};
 
-
+	int GetFreeDevice();
 	//CublasRelated
 	cublasHandle_t handle;
 	cublasStatus_t stat;

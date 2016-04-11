@@ -76,7 +76,7 @@ int main(int argc, char** argv){
 	std::vector<int> m_jvals = m_input->GetJvals();
 	
 	//Initialize our gpu
-	GpuManager* m_gpu = new GpuManager(0,omp_threads);
+	GpuManager* m_gpu = new GpuManager(-1,omp_threads);
 
 	
 	m_gpu->InitializeAndTransferConstants(m_input->GetMaxJ(),m_input->GetNSym(),m_input->GetSymMaxDegen());
