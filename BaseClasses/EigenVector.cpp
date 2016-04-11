@@ -14,7 +14,7 @@ void EigenVector::CacheEigenvectors(States* pstates){
 	Log("Caching Eigenvectors...");
 	states = pstates;
 	
-	Log("allocating heap......");
+	Log("allocating heap......done!");
 	
 	total_vals = BaseManager::GetAvailableGlobalMemory()/sizeof(double);
 	cur_vals = 0;
@@ -84,7 +84,17 @@ void EigenVector::CacheEigenvectors(States* pstates){
 	}
 	Log("We have cached %d out of %d vectors here!\n",cached_vectors,total_vectors);
 	if(cached_vectors==total_vectors){
-		Log("Alright! we've cached all vectors here...Hopefully all other processes did the same! Lets check...");
+		Log("Alright! we've cached all vectors here...Lets close the files. Hopefully all other processes did the same! Lets check...\n");
+		for(int j = 0; j < jVals.size(); j++){
+			for(int g = 0; g < sym_nrepres; g++){
+				if(eigenvector_files[j][g]==NULL)
+					continue;
+				fclose(eigenvector_files[j][g]);
+			}
+			
+		}
+		eigenvector_files.clear();
+		
 	}
 
 	int global_vector_count;
@@ -125,7 +135,7 @@ int EigenVector::ReadVector(double* array,int nLevel,size_t size){
 		
 		int level=nLevel/m_num_processes;
 
-		if(level < cached_vectors){
+		if(level > cached_vectors){
 			//Read from file
 			ReadVectorFromFile(array,nLevel,size);
 		
