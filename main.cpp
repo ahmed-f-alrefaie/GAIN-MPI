@@ -74,12 +74,17 @@ int main(int argc, char** argv){
 	m_states->ReadStates();
 
 	std::vector<int> m_jvals = m_input->GetJvals();
-	
+	GpuManager* m_gpu;
+	for(int i=0; i < nProcs; i++){
 	//Initialize our gpu
-	GpuManager* m_gpu = new GpuManager(-1,omp_threads);
-
+		if(rank==i){
+			m_gpu = new GpuManager(-1,omp_threads);
+			m_gpu->InitializeAndTransferConstants(m_input->GetMaxJ(),m_input->GetNSym(),m_input->GetSymMaxDegen());
+		}
+		MPI_Barrier( MPI_COMM_WORLD);
+	}
 	
-	m_gpu->InitializeAndTransferConstants(m_input->GetMaxJ(),m_input->GetNSym(),m_input->GetSymMaxDegen());
+	
 
 	for(int i = 0; i < m_input->GetNJ(); i++){
 		m_basisSets.push_back(new TroveBasisSet(m_jvals[i],m_input->GetNSym(),m_input->GetSymmetryDegen()));
@@ -283,8 +288,8 @@ int main(int argc, char** argv){
 			float lines_per_second = float(g_transitions)/Timer::getInstance().GetTotalTimeInSeconds("Intensity Loop");
 			
 			float predicted_time = 	(float(num_trans)/lines_per_second)*total_time_hours;
-			
-			printf("### %d / %d transitions, L/s: %14.3E Pred Total time %8.4f hours\n",g_transitions,num_trans,lines_per_second,predicted_time);					
+			float percentage_of_transitions = (float)transitions*100.0/(float)g_transitions;
+			printf("### %d / %d transitions, L/s: %14.3E Pred Total time %8.4f hours [%12.6f]\n",g_transitions,num_trans,lines_per_second,predicted_time,percentage_of_transitions);					
 					
 			
 		}
