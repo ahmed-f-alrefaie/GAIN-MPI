@@ -152,6 +152,7 @@ int main(int argc, char** argv){
 		printf("-------------------------------------Begin Intensity Calculation----------------------------\n");
 	}
 	MPI_Barrier( MPI_COMM_WORLD);
+	int transitions = 0;
 	
 	for(int iLevelI = 0; iLevelI < nLevels; iLevelI++){
 		
@@ -205,14 +206,14 @@ int main(int argc, char** argv){
 		Timer::getInstance().EndTimer("Half linestrength");
 
 		Timer::getInstance().StartTimer("Intensity Loop");
-		int tran = 0;
-		#pragma omp parallel for
+		
+		#pragma omp parallel for reduction(+:transitions)
 		for(int iLevelF=rank; iLevelF < nLevels; iLevelF+=nProcs){
 
 			if(!m_states->FilterIntensity(iLevelI,iLevelF))
 				continue;
 	
-			tran++;
+			
 			int thread_id = omp_get_thread_num();
 
 			int jF= m_states->GetJ(iLevelF);
@@ -265,12 +266,30 @@ int main(int argc, char** argv){
 
 
 			printf("%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E [%12.6f] || \n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,energyI-ZPE);
-
+			transitions++;
 
 			
 
 		}
+		MPI_Barrier( MPI_COMM_WORLD);
 		Timer::getInstance().EndTimer("Intensity Loop");
+		int g_transitions =0;
+		MPI_Reduce(&transitions,&g_transitions,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
+		
+		if(rank==0){
+			float total_time_hours = 1.0/3600.0;
+			
+			float lines_per_second = float(g_transitions)/Timer::getInstance().GetTotalTimeInSeconds("Intensity Loop");
+			
+			float predicted_time = 	(float(num_trans)/lines_per_second)*total_time_hours;
+			
+			printf("### %d / %d transitions, L/s: %14.3E Pred Total time %8.4f hours\n",g_transitions,num_trans,lines_per_second,predicted_time);					
+					
+			
+		}
+
+
+		MPI_Barrier( MPI_COMM_WORLD);
 
 
 	}

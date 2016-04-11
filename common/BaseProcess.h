@@ -13,6 +13,8 @@ protected:
 	BaseProcess();
 public:
 	void Log(const char* format,...);
+	void LogError(const char* format,...);
+	void LogErrorAndAbort(const char* format,...);
 	void VerboseLog(const char* format,...);
 	//void BlockAll();
 };

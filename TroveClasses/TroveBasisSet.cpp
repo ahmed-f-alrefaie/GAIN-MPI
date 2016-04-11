@@ -276,7 +276,7 @@ void TroveBasisSet::ReadBasisSet(){
 			
 	}
 	std::getline(eig_qu,line);
-	std::cout<<line<<std::endl;
+	//std::cout<<line<<std::endl;
 	if(trim(line).compare("End irreducible transformation")!=0)
 	{
 		Log("[bset_contr_factory]: wrong irrep-footer");

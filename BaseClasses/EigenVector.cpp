@@ -106,7 +106,7 @@ void EigenVector::ReadVectorFromFile(double* array,int nLevel,size_t size){
 		int record = states->GetRecord(nLevel);
 		int rec_len = states->GetRecordLength(nLevel);
 		//Otherwise we can continue
-		fseek(eigenvector_files[jInd][gamma],record*size_t(rec_len)*sizeof(double),SEEK_SET);
+		fseek(eigenvector_files[jInd][gamma],size_t(record)*size_t(rec_len)*sizeof(double),SEEK_SET);
 		
 		fread(array,sizeof(double),size_t(rec_len),eigenvector_files[jInd][gamma]);	
 
