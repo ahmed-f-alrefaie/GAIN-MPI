@@ -59,8 +59,6 @@ int main(int argc, char** argv){
 	EigenVector* eigen;
 
 
-	
-
 
 	//Read inputs
 	m_input = new TroveInput();
@@ -149,6 +147,12 @@ int main(int argc, char** argv){
 
 	double ZPE = m_input->GetZPE();
 	
+	char output_filename[1024];
+	
+	sprintf(output_filename,"%s_%d",input_filename,rank);	
+	
+	FILE* outputfile = fopen(output_filename,"wb");
+
 
 	MPI_Barrier( MPI_COMM_WORLD);
 	if(rank ==0){
@@ -270,7 +274,7 @@ int main(int argc, char** argv){
 			double A_einst = ACOEF*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
 
 
-			printf("[%i] %12.6f %8d %4d %4d <- %8d %4d %4d %16.8E [%12.6f] || \n",rank,nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,energyI-ZPE);
+			fprintf(outputfile,"[%i] %12.6f %8d %4d %4d <- %8d %4d %4d %16.8E [%12.6f] || [%8i] \n",rank,nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,energyI-ZPE,iLevelF);
 			transitions++;
 
 			
@@ -296,10 +300,11 @@ int main(int argc, char** argv){
 
 
 		MPI_Barrier( MPI_COMM_WORLD);
-
+		
 
 	}
 	MPI_Barrier( MPI_COMM_WORLD);
+	fclose(outputfile);
 	if(rank==0){
 		Timer::getInstance().PrintTimerInfo();
 	}
