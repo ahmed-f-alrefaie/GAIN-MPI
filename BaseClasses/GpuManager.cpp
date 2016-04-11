@@ -189,7 +189,7 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 					double three = three_j(jI, 1, jF, kI, kF - kI, -kF);
 					//printf("(%i,%i,%i,%i) = %14.3E\n",jI,jF,kI,kF,three);
 					tmp_three_J[jI + kI*(jmax+1) +(jF-jI + 1)*(jmax+1)*(jmax+1) +  (kF-kI + 1)*(jmax+1)*(jmax+1)*3] = three;
-					printf("three-j[%i,%i,%i,%i] = %12.6f\n",jI,jF,kI,kF,tmp_three_J[jI + kI*(jmax+1) +(jF-jI + 1)*(jmax+1)*(jmax+1) +  (kF-kI + 1)*(jmax+1)*(jmax+1)*3]);
+					Log("three-j[%i,%i,%i,%i] = %12.6f\n",jI,jF,kI,kF,tmp_three_J[jI + kI*(jmax+1) +(jF-jI + 1)*(jmax+1)*(jmax+1) +  (kF-kI + 1)*(jmax+1)*(jmax+1)*3]);
 				}	
 	
 	AllocateGpuMemory((void**)&threejsymbols,sizeof(double)*size_t((jmax+1)*(jmax+1)*3*3));

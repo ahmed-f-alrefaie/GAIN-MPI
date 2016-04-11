@@ -112,7 +112,7 @@ void TroveDipole::InitDipole(size_t avail_mem){
 
 
 	delete[] temp_dipole;
-	printf("done!\n");
+	Log("done!\n");
 
 
 };
