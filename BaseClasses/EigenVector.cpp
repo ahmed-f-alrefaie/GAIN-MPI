@@ -14,8 +14,10 @@ void EigenVector::CacheEigenvectors(States* pstates){
 	Log("Caching Eigenvectors...");
 	states = pstates;
 	
-	Log("allocating heap......done!");
+	Log("allocating heap......done!\n");
 	
+	Log("Total memory for eigenvectors is %12.6f GB\n",((double)BaseManager::GetAvailableGlobalMemory())/1e9);
+
 	total_vals = BaseManager::GetAvailableGlobalMemory()/sizeof(double);
 	cur_vals = 0;
 	
