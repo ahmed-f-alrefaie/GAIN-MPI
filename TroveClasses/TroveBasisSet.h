@@ -46,7 +46,6 @@ private:
     int ncontr;
     int nclasses;
     int icontr;
-    int iroot;
 
     int* 	icontr2icase;
     int*	icase2icontr;
