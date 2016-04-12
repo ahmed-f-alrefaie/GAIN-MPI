@@ -7,7 +7,7 @@
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 
-void CheckCudaError(const char* tag);
+//void CheckCudaError(const char* tag);
 
 
 void copy_symmetry_constants(int sym_nrepres,int maxdeg);

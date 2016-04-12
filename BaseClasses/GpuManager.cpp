@@ -88,14 +88,30 @@ GpuManager::GpuManager(int pgpu_id,int nprocs) : BaseProcess(), BaseManager(), g
 	if(pgpu_id==-1){
 		gpu_id = GetFreeDevice();
 		if(gpu_id==-1){
-			printf("Error could not get device!\n");
-			exit(0);
+			LogErrorAndAbort("Error could not get device!\n");
+			
 		}
 	}
 	Log("GPUManager Init with ID: %i and Nprocs: %i\n",gpu_id,Nprocs);
 	hls_stream_id = 0;
 
 }
+
+
+void GpuManager::CheckCudaError(const char* tag){
+
+  cudaSetDevice(gpu_id);
+  // check for error
+  cudaError_t error = cudaGetLastError();
+  if(error != cudaSuccess)
+  {
+    // print the CUDA error message and exit
+    LogErrorAndAbort("[%s] CUDA error: %s\n", tag,cudaGetErrorString(error));
+    cudaDeviceReset();
+    
+
+  }
+};
 
 void GpuManager::AllocateGpuMemory(void** mem, size_t size){
 		if(cudaSuccess != cudaMalloc(mem,size)){
@@ -127,6 +143,7 @@ void GpuManager::TransferToHost(void* dst,const void* src,size_t size){
 }
 
 
+
 void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax_degen){
 	//set the device
 
@@ -142,7 +159,7 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 	cudaGetDeviceProperties(&devProp, gpu_id);
 	
 	//Lets get some gpu_info.
-	InitializeMemory(size_t(double(devProp.totalGlobalMem)*0.95));
+	InitializeMemory(size_t(double(devProp.totalGlobalMem)*0.99));
 	Log("Gpu ID %d : Total Memory: %12.6f\n",gpu_id,double(GetAvailableMemory())*1e-9);
 	
 
@@ -203,8 +220,8 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 	Log("Initializing cuBlas..");
 	stat = cublasCreate(&handle);
 	if (stat != CUBLAS_STATUS_SUCCESS) {
-		Log ("CUBLAS initialization failed\n");
-		exit(0);
+		LogErrorAndAbort("CUBLAS initialization failed\n");
+		
 	}
 
 	cublasSetPointerMode(handle,CUBLAS_POINTER_MODE_DEVICE);
@@ -368,8 +385,8 @@ void GpuManager::TransferDipole(Dipole* dipole_,int block){
 
 
 	if(dipole_me->IsBlocked()){
-		Log("Blocking not yet implemented here!\n");
-		exit(0);
+		LogErrorAndAbort("Blocking not yet implemented here!\n");
+		
 	}
 
 	//Alloc to the GPU the biggest block size

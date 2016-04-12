@@ -58,9 +58,8 @@ void TroveBasisSet::ReadBasisSet(){
 	
 	if(trim(line).compare("Start Primitive basis set")!=0)
 	{
-		Log("[bset_contr_factory]: bad header %s",filename);
+		LogErrorAndAbort("[bset_contr_factory]: bad header %s",filename);
 		//fLog(stderr,"[bset_contr_factory]: bad header");
-		exit(0);
 	}	
 
 	std::getline(eig_qu,line);
@@ -147,8 +146,8 @@ void TroveBasisSet::ReadBasisSet(){
         		
         		if(iroot != icontr)
         		{
-        			Log("[bset_contr_factory] wrong indexing icontr = %i iroot = %i\n",icontr,iroot);
-        			exit(0);
+        			LogErrorAndAbort("[bset_contr_factory] wrong indexing icontr = %i iroot = %i\n",icontr,iroot);
+        			
         		}
         		icontr = icontr + 1;
         	}
@@ -164,8 +163,8 @@ void TroveBasisSet::ReadBasisSet(){
 
 	if (icontr != ncontr)
 	{
-		Log("[bset_contr_factory] wrong indexing\n");
-		exit(0);
+		LogErrorAndAbort("[bset_contr_factory] wrong indexing\n");
+		
 	}
 	
 	//read(iounit, '(2i8)') ncases, nlambdas
@@ -204,8 +203,8 @@ void TroveBasisSet::ReadBasisSet(){
 	//cout<<line<<endl;
 	if(trim(line).compare("Start irreducible transformation")!=0)
 	{
-		Log("[bset_contr_factory]: wrong sym-footer");
-		exit(0);
+		LogErrorAndAbort("[bset_contr_factory]: wrong sym-footer");
+		
 	}
 	
 	irr = new TO_PTrepresT[sym_nrepres];
@@ -279,8 +278,8 @@ void TroveBasisSet::ReadBasisSet(){
 	//std::cout<<line<<std::endl;
 	if(trim(line).compare("End irreducible transformation")!=0)
 	{
-		Log("[bset_contr_factory]: wrong irrep-footer");
-		exit(0);
+		LogErrorAndAbort("[bset_contr_factory]: wrong irrep-footer");
+		
 	}
 	
 	Log("Done!\n");
@@ -301,8 +300,8 @@ void TroveBasisSet::Correlate(){
 	
 	if(j0BasisSet->jval != 0)
 	{
-		 Log("[correlate_index] index_correlation: bset_contrj0 is not for J=0\n");
-		exit(0);
+		 LogErrorAndAbort("[correlate_index] index_correlation: bset_contrj0 is not for J=0\n");
+		
 	}
 	
 	int nclasses = Nclasses;
@@ -383,9 +382,9 @@ void TroveBasisSet::Correlate(){
 			if(!found)
 			{
 				 Log("icase =%i ilambda = %i\n",icase,ilambda);
-				 Log("[index_correlation] not found for J = %i -> problems with checkpoints?\n", jval);
+				 LogErrorAndAbort("[index_correlation] not found for J = %i -> problems with checkpoints?\n", jval);
 				//f Log(stderr,"[index_correlation] No correlation for J = %i\n", jval);
-				exit(0);
+				
 			}
 			// Log("Done!");
 			//jcontr = bset_contr(1)%icase2icontr(jcase,jlambda)
@@ -471,8 +470,8 @@ void TroveBasisSet::Correlate(){
 
 		ksize++;
 		if(iroot_correlat_j0[iroot] >= j0BasisSet->Maxcontracts){
-			 Log("Error in root correlats %i %i \n",iroot_correlat_j0[iroot],j0BasisSet->Maxcontracts);
-			exit(0);
+			 LogErrorAndAbort("Error in root correlats %i %i \n",iroot_correlat_j0[iroot],j0BasisSet->Maxcontracts);
+			
 		}
           	//#ifdef DEBUG
           	//Log("iroot = %i ilevel = %i icase = %i ideg=%i ilambda = %i jcontr = %i k = %i, tau = %i\n",iroot,ilevel,icase,ideg,ilambda,jcontr,t_k,t_tau); fflush(0);

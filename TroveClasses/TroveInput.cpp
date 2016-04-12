@@ -161,8 +161,8 @@ void TroveInput::ComputeIGammaPair(){
 				igamma_pair[igammaI] = igammaF;
 				ngamma++;
 				if(ngamma>1){
-					Log("find_igamma_pair: Assumption that selection rules come in pairs is not fulfilled!\n");
-					exit(0);
+					LogErrorAndAbort("find_igamma_pair: Assumption that selection rules come in pairs is not fulfilled!\n");
+					
 					
 				}
 			}
@@ -170,8 +170,8 @@ void TroveInput::ComputeIGammaPair(){
 		}
 		//
 		if(gns[igammaI] != gns[igamma_pair[igammaI]]){
-			Log("find_igamma_pair: selection rules do not agree with Gns\n");
-			exit(0);		
+			LogErrorAndAbort("find_igamma_pair: selection rules do not agree with Gns\n");
+					
 		}
 		
 	}

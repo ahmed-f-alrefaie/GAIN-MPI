@@ -96,18 +96,7 @@ const double* __restrict__ dipole_me,
 const double* vector,const double*  threej,double*  half_ls);
 
 
-void CheckCudaError(const char* tag){
-  // check for error
-  cudaError_t error = cudaGetLastError();
-  if(error != cudaSuccess)
-  {
-    // print the CUDA error message and exit
-    printf("[%s] CUDA error: %s\n", tag,cudaGetErrorString(error));
-    cudaDeviceReset();
 
-    exit(-1);
-  }
-};
 
 void copy_symmetry_constants(int sym_nrepres,int maxdeg){
 	

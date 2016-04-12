@@ -371,7 +371,7 @@ const double* vector,const double*  threej,double*  half_ls)
 				s_sigmaI[t_id] = (kI % 3);
 
 				//ls =f3j*vector[irootI]*(1.0 + (SQRT2 - 1.0)*double(kI_kF_zero)*(!kI_kF_eq));
-				if(g_id==0)printf("%i ls =%14.3e f3j=%12.6f vector=%14.3e\n",t_id,ls,f3j,vector[irootI]);
+				//if(g_id==0)printf("%i ls =%14.3e f3j=%12.6f vector=%14.3e\n",t_id,ls,f3j,vector[irootI]);
 
 				ls = vector[irootI];		
 				//Will not diverge		

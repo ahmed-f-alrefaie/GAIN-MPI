@@ -27,3 +27,26 @@ void BaseProcess::VerboseLog(const char* format,...){
     va_end( args );	
 
 }
+
+
+void BaseProcess::BaseProcess::LogError(const char* format,...){
+    	
+    va_list args;
+    va_start( args, format );
+    fprintf(stderr,"[%d]: ",m_process_id);
+    vfprintf(stderr, format, args );
+    va_end( args );	
+
+}
+
+void BaseProcess::LogErrorAndAbort(const char* format,...){
+
+    va_list args;
+    va_start( args, format );
+    fprintf(stderr,"[%d]: ",m_process_id);
+    vfprintf(stderr, format, args );
+    va_end( args );
+
+    MPI_Abort(MPI_COMM_WORLD,0);
+
+}

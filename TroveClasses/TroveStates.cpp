@@ -56,16 +56,16 @@ void TroveStates::ReadJGStates(int jVal,int gamma,int jInd){
 	std::ifstream descr_file(filename);
 	if(!descr_file)
 	{
-		Log("Error! couldn';t open %s!!!!\n",filename);
-		exit(0);
+		LogErrorAndAbort("Error! couldn';t open %s!!!!\n",filename);
+		
 	}
 	Log("I'm sorry but I can't read the fingerprints of %s yet so I'm skipping them :( please be careful ;_;\n",filename);
 	while(trim(line).compare("Start Quantum numbers and energies")!=0)
 	{
 		getline(descr_file,line);
 		if(descr_file.eof()){
-			printf("Error! malformed descr file %s!!!!\n",filename);
-			exit(0);
+			LogErrorAndAbort("Error! malformed descr file %s!!!!\n",filename);
+			
 		}
 					
 	}
@@ -143,8 +143,8 @@ void TroveStates::ReadStates(){
 
 
 	if(eigenvalues.size()==0){
-		Log("Filters are too tight!\n");
-		exit(0);
+		LogErrorAndAbort("Filters are too tight!\n");
+		
 	}
 
 	Log("Sorting %d states.................",GetNumberStates());

@@ -35,8 +35,8 @@ void EigenVector::CacheEigenvectors(States* pstates){
 			Log("Opening %s\n",filename);
 			eigenvector_files.back().back() = fopen(filename,"rb");
 			if(eigenvector_files.back().back() == NULL){
-				Log("Could not open %s!!\n",filename);
-				exit(0);
+				LogErrorAndAbort("Could not open %s!!\n",filename);
+				
 			}
 
 		}
@@ -141,8 +141,8 @@ int EigenVector::ReadVector(double* array,int nLevel,size_t size){
 		
 		}else{
 			if(size != vector_heap_information[level].vector_size){
-				Log("Problem, size discrepency!\n");
-				exit(0);
+				LogErrorAndAbort("Problem, size discrepency!\n");
+				
 			}
 			memcpy(array,vector_heap_information[level].start,size_t(vector_heap_information[level].vector_size)*sizeof(double));
 		

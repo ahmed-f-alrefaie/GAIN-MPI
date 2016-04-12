@@ -18,18 +18,18 @@ void TroveDipole::InitDipole(size_t avail_mem){
 
 	if(extF == NULL)
 	{
-		Log("[read_dipole] Error: checkpoint file of name %s not found","j0_extfield.chk");
+		LogErrorAndAbort("[read_dipole] Error: checkpoint file of name %s not found","j0_extfield.chk");
 		//fprintf(stderr,"[read_dipole] Error: checkpoint file not found");
-		exit(0);
+		
 	}
 	
 	ReadFortranRecord(extF, buff);
 	
 	if(memcmp(buff,"Start external field",20) != 0)
 	{
-		Log("[read_dipole] Error: checkpoint file of name %s has bogus header %s","j0_extfield.chk");
+		LogErrorAndAbort("[read_dipole] Error: checkpoint file of name %s has bogus header %s","j0_extfield.chk");
 		//fprintf(stderr,"[read_dipole] bogus header");
-		exit(0);
+		
 	}
 	
 	ReadFortranRecord(extF, &ncontr_t);
@@ -53,9 +53,9 @@ void TroveDipole::InitDipole(size_t avail_mem){
 		ReadFortranRecord(extF, &imu_t);
 		if(imu_t != (i+1))
 		{
-			Log("[read_dipole] has bogus imu - restore_vib_matrix_elements: %i /= %i",imu_t,(i+1));
+			LogErrorAndAbort("[read_dipole] has bogus imu - restore_vib_matrix_elements: %i /= %i",imu_t,(i+1));
 			//fprintf(stderr,"[read_dipole] bogus imu");
-			exit(0);
+			
 		}
 		
 		ReadFortranRecord(extF, (temp_dipole) + i*rootsize2);
@@ -66,9 +66,7 @@ void TroveDipole::InitDipole(size_t avail_mem){
 	ReadFortranRecord(extF, buff);		 
 		if(memcmp(buff,"End external field",18) != 0)
 	{
-		printf("[read_dipole] Error: checkpoint file of name %s has bogus footer %s","j0_extfield.chk",buff);
-		fprintf(stderr,"[read_dipole] bogus footer");
-		exit(0);
+		LogErrorAndAbort("[read_dipole] Error: checkpoint file of name %s has bogus footer %s","j0_extfield.chk",buff);
 	}
 	
 	fclose(extF);

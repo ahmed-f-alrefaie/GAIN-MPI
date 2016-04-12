@@ -180,6 +180,9 @@ int main(int argc, char** argv){
 		
 		m_gpu->UpdateEigenVector();
 
+
+		if(rank==0) {printf("Lower state energy: %12.6f cm-1\n",energyI-ZPE); fflush(0);}
+
 		Timer::getInstance().StartTimer("Half linestrength");
 		for(int indF = 0; indF < nJ; indF++){
 
@@ -274,7 +277,7 @@ int main(int argc, char** argv){
 			double A_einst = ACOEF*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
 
 
-			fprintf(outputfile,"[%i] %12.6f %8d %4d %4d <- %8d %4d %4d %16.8E [%12.6f] || [%8i] \n",rank,nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,energyI-ZPE,iLevelF);
+			fprintf(outputfile,"%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E \n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst);
 			transitions++;
 
 			
