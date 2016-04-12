@@ -456,9 +456,9 @@ void TroveBasisSet::Correlate(){
 		ideg    = index_deg[icase].icoeffs[0 + (nclasses+1)*ilambda];
 		// Log("ideg = %i\n",ideg);
 		//if(jval==23&&iroot > 14346) Log("rot parts\n");
-		t_k      = rot_index[ilevel+ideg*ncases].k;
+		t_k      = rot_index[ilevel+ideg*Maxsymcoeffs].k;
 		//if(jval==23&&iroot > 14346) Log("k = %i\n",k);
-          	t_tau    = rot_index[ilevel+ideg*ncases].tau;
+          	t_tau    = rot_index[ilevel+ideg*Maxsymcoeffs].tau;
 		//if(jval==23&&iroot > 14346) Log("tau=%i\n",tau);
 		ktau[iroot] = 2*t_k+t_tau & 1;
 		//tau[iroot] = ktau[iroot] & 1;
