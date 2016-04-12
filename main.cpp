@@ -225,13 +225,14 @@ int main(int argc, char** argv){
 				MPI_Bcast(half_linestrength[indF][idegI], DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
 				//Update our gpu
 				
-				m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
+				if(expected_process != rank) m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
 
 
 				
 			
 
 			}
+			//MPI_Abort(MPI_COMM_WORLD,0);
 
 		}
 

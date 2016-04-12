@@ -16,7 +16,7 @@ private:
 	States* states;	
 	bool to_file;
 	double threshold;
-
+	double Acoef_s_1;
 	double Q;
 	double temperature;
 	double ZPE;

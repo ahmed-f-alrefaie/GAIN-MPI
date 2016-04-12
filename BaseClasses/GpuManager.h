@@ -132,7 +132,9 @@ public :
 
 	void ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int proc);
 
-	void WaitForLineStrengthResult(int proc_id){cudaSetDevice(gpu_id); cudaStreamSynchronize(dot_product_omp_stream[proc_id]);}
+	void WaitForLineStrengthResult(int proc_id){cudaSetDevice(gpu_id); 
+	cudaMemcpyAsync(host_linestrength[proc_id], linestrength[proc_id],sizeof(double)*size_t(MaxDegen)*size_t(MaxDegen),cudaMemcpyDeviceToHost,dot_product_omp_stream[proc_id]);	
+	cudaStreamSynchronize(dot_product_omp_stream[proc_id]);}
 
 	void WaitForDevice(){cudaSetDevice(gpu_id); cudaDeviceSynchronize();};
 

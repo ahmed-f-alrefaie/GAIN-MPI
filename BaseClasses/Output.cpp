@@ -17,7 +17,7 @@ Output::Output(States* pstates,double ptemperature,double ppartition,double thre
 	}
 
 	beta = PLANCK * VELLGT / (BOLTZ * temperature);
-
+	Acoef_s_1 = 64.0e-36 * PI*PI*PI*PI  / (3.0 * PLANCK);
 }
 	
 void Output::Initialize(){
@@ -44,6 +44,10 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 	double linestr = 0.0;
 	double A_einst = 0.0;
 
+	char buffer[1024];
+	char lsbuf[300];
+	lsbuf[0]='\0';
+
 	double nu_if = states->GetEnergy(iLevelF) - states->GetEnergy(iLevelI);
 	//Lower
 	int jI= states->GetJ(iLevelI);
@@ -59,7 +63,7 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 	for(int idegF=0; idegF < ndegF; idegF++){
 		for(int idegI=0; idegI < ndegI; idegI++){
 			linestr = linestrength[idegI + idegF*maxDeg];
-					
+			sprintf(lsbuf + strlen(lsbuf)," %16.9E",linestr);		
 			ls +=(linestr*linestr);
 		}
 	}
@@ -68,12 +72,13 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 
 	ls/=double(ndegI);
 
-	A_einst = ACOEF*double((2*jI)+1)*ls*nu_if*nu_if*abs(nu_if);
+	A_einst = Acoef_s_1*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
 
 	if(A_einst < threshold)
 		return;
 
-	fprintf(output,"%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E \n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst);
+	sprintf(buffer,"%12.6lf %8d %4d %4d <- %8d %4d %4d %16.8E [%s ] ||\n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,lsbuf);
+	fprintf(output,"%s",buffer);
 }
 
 void Output::Close(){

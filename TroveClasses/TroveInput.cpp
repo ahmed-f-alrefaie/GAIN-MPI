@@ -121,7 +121,7 @@ void TroveInput::HandleSymmetery(){
 	sym_nrepres = sym_degen.size();
 	for(int i = 0; i < sym_nrepres; i++)
 		sym_maxdegen = std::max(sym_maxdegen,sym_degen[i]);
-	
+	Log("Max degeneracy = %d\n",sym_maxdegen);
 }
 
 void TroveInput::RemoveBrackets(char* string){

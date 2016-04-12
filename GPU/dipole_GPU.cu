@@ -500,13 +500,18 @@ const double* vector,double*  half_ls)
 //This relates to TROVEs method of expanding vectors to the primitive basis set
 __global__ void device_expand_vectors(const int dimenI,const int igammaI,const int maxcoeff,const int idegI,const int sdeg,const int Ntot,const int* ijterms_, const int* icontr_,const int* N_,const double* repres_, const double* vecI_,double* vec_)
 {
-    for (int irootI = blockIdx.x * blockDim.x + threadIdx.x; 
-         irootI < dimenI; 
-         irootI += blockDim.x * gridDim.x) {
+	int irootI = blockIdx.x * blockDim.x + threadIdx.x; 
+	if(irootI < dimenI)
+	{
 	
-		int irow,ib,iterm,nelem,isrootI,Ntot,sdeg;
+		int irow;
+		int iterm;
+		int nelem;
+		int isrootI;
+		int ib; 
 		double dtemp0 = 0.0;
 		irow = icontr_[irootI];
+
 		ib = icontr_[irootI + dimenI];
 	
 		iterm = ijterms_[irow + igammaI*maxcoeff];
@@ -524,6 +529,8 @@ __global__ void device_expand_vectors(const int dimenI,const int igammaI,const i
 
 
 }
+
+
 
 void cleanup_gpu(){
 	

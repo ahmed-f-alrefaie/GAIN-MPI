@@ -74,6 +74,9 @@ bool States::FilterIntensity(int I, int F){
 }
 bool States::FilterAnyTransitionsFromJ(int I, int J){
 
+	int jI = eigenvalues.at(I).jval;
+	if(abs(jI-J)>1 || jI+J==0)
+		return false;
 	for(int ilevelF=0; ilevelF < Neigenlevels; ilevelF++){
 		if(eigenvalues.at(ilevelF).jval != J)
 			continue;

@@ -237,6 +237,8 @@ void TroveBasisSet::ReadBasisSet(){
 	{
 		irr[igamma].N = new int[Maxsymcoeffs];
 		irr[igamma].repres = new double[Ntotal[igamma]*sym_degen[igamma]*mat_size];
+		//Log("J=%d gamma=%d Ntotal=%d Sym_degen=%d mat_size=%d repres_size=%d\n",
+		 //   jval,   igamma,    Ntotal[igamma],    sym_degen[igamma],mat_size,   (Ntotal[igamma]*sym_degen[igamma]*mat_size));
 		
 		//           do icoeff = 1,bset_contr(jind)%Maxsymcoeffs
                 //		!

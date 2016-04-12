@@ -335,32 +335,35 @@ void GpuManager::TransferInflation(int* icontr_, int* ijterm,int dimen,int maxsy
 
 	Log("Transferring Inflation\n");
 	tmp_inflate.MaxSymCoeffs = maxsymcoeffs;
-	tmp_inflate.Ntotal = Ntot;
 	
 	//Transfer ijtems and icontr
 	AllocateGpuMemory((void**)&tmp_inflate.ijTerms,sizeof(int)*tmp_inflate.MaxSymCoeffs*SymNrepres);
 	TransferToGpu(tmp_inflate.ijTerms,ijterm,sizeof(int)*tmp_inflate.MaxSymCoeffs*SymNrepres);
 
-	AllocateGpuMemory((void**)&tmp_inflate.contr,sizeof(int)*size_t(dimen*2));
-	TransferToGpu(tmp_inflate.contr,icontr_,sizeof(int)*size_t(dimen*2));
+	AllocateGpuMemory((void**)&tmp_inflate.contr,sizeof(int)*size_t(dimen)*2l);
+	TransferToGpu(tmp_inflate.contr,icontr_,sizeof(int)*size_t(dimen)*2l);
 
+
+	tmp_inflate.sDeg = sym_degen;
 
 	for(int i = 0; i < SymNrepres; i++){
+
+		tmp_inflate.Ntotal.push_back(Ntot[i]);	
 		tmp_inflate.sDeg.push_back(sym_degen[i]);
-		
 		tmp_inflate.N.push_back(NULL);
+
 		AllocateGpuMemory((void**)&tmp_inflate.N.back(),sizeof(int)*tmp_inflate.MaxSymCoeffs);	
 		TransferToGpu(tmp_inflate.N.back(),N[i],sizeof(int)*tmp_inflate.MaxSymCoeffs);
 
 		
 
 		tmp_inflate.repres.push_back(NULL);
-		AllocateGpuMemory((void**)&tmp_inflate.repres.back(),sizeof(double)*tmp_inflate.sDeg[i]*tmp_inflate.Ntotal[i]*matsize);	
-		TransferToGpu(tmp_inflate.repres.back(),repres[i],sizeof(double)*tmp_inflate.sDeg[i]*tmp_inflate.Ntotal[i]*matsize);
+		AllocateGpuMemory((void**)&tmp_inflate.repres.back(),sizeof(double)*Ntot[i]*sym_degen[i]*matsize);	
+		TransferToGpu(tmp_inflate.repres.back(),repres[i],sizeof(double)*Ntot[i]*sym_degen[i]*matsize);
 	}
 	
 
-	tmp_inflate.sDeg = sym_degen;
+	
 	inflationData.push_back(tmp_inflate);
 	Log("done!\n");
 	
@@ -422,6 +425,7 @@ void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int i
 	//transform to primitive
 	transform_vector_primitive(basisSets[indI].dimensions,igammaI,inflationData[indI].MaxSymCoeffs,idegI,inflationData[indI].sDeg[igammaI],inflationData[indI].Ntotal[igammaI],inflationData[indI].ijTerms, inflationData[indI].contr,inflationData[indI].N[igammaI],inflationData[indI].repres[igammaI], vectorI,prim_half_ls_vectors[indF][idegI],0);
 	
+
 	//Wait will replace with an event
 	cudaDeviceSynchronize();
 	CheckCudaError("Transformation");
@@ -460,11 +464,18 @@ void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int i
 	
 
 	}
-
-	
+	/*double* tmp_prim_ls=new double[DimenMax];
+	double* tmp_half_ls=new double[DimenMax];
+	Log("### INDI=%i INDF=%i IGAMMAI=%i#####\n",indI,indF,igammaI); 
+	TransferToHost((void*)tmp_prim_ls,(void*)prim_half_ls_vectors[indF][idegI],sizeof(double)*basisSets[indI].dimensions);
+	TransferToHost((void*)tmp_half_ls,(void*)half_ls_vectors[indF][idegI],sizeof(double)*basisSets[indF].dimensions);
+	cudaDeviceSynchronize();
+	for(int i = 0; i < DimenMax; i++)
+		Log("%14.3E -> %14.3E\n",tmp_prim_ls[i],tmp_half_ls[i]);
+	*/
 	cudaDeviceSynchronize();
 	CheckCudaError("Half line strength");
-	TransferToHost(half_ls,half_ls_vectors[indF][idegI],sizeof(double)*size_t(DimenMax));
+	TransferToHost(half_ls,half_ls_vectors[indF][idegI],sizeof(double)*size_t(basisSets[indF].dimensions));
 	cudaDeviceSynchronize();
 
 }
@@ -476,7 +487,7 @@ void GpuManager::ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int 
 	cublasSetStream(handle,dot_product_omp_stream[proc]);
 	cublasDdot (handle, basisSets[indF].dimensions,prim_vectorF[proc], 1, half_ls_vectors[indF][idegI], 1, linestrength[proc] + idegI + idegF*MaxDegen );
 	//Copy result to host
-	cudaMemcpyAsync(host_linestrength[proc] + idegI + idegF*MaxDegen, linestrength[proc] + idegI + idegF*MaxDegen,sizeof(double),cudaMemcpyDeviceToHost,dot_product_omp_stream[proc]);
+	
 
 
 }
