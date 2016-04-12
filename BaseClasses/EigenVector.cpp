@@ -127,6 +127,11 @@ void EigenVector::ReadVectorFromFile(double* array,int nLevel,size_t size){
 
 }
 
+void EigenVector::ReadVectorFromHeap(double* array,int nLevel,size_t size){
+
+	memcpy(array,vector_heap_information[nLevel].start,size_t(vector_heap_information[nLevel].vector_size)*sizeof(double));
+
+}
 
 
 int EigenVector::ReadVector(double* array,int nLevel,size_t size){
@@ -137,16 +142,18 @@ int EigenVector::ReadVector(double* array,int nLevel,size_t size){
 		
 		int level=nLevel/m_num_processes;
 
-		if(level >= cached_vectors){
-			//Read from file
-			ReadVectorFromFile(array,nLevel,size);
-		
-		}else{
+		if(level < cached_vectors){
 			if(size != vector_heap_information[level].vector_size){
 				LogErrorAndAbort("Problem, size discrepency!\n");
 				
 			}
-			memcpy(array,vector_heap_information[level].start,size_t(vector_heap_information[level].vector_size)*sizeof(double));
+			
+			//Read from  cahce
+			ReadVectorFromHeap(array,level,size);
+			
+		
+		}else{
+			ReadVectorFromFile(array,nLevel,size);
 		
 		}
 //
