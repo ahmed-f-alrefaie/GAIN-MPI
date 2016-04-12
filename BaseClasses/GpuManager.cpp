@@ -81,7 +81,7 @@ int GpuManager::GetFreeDevice(){
 
 
 
-GpuManager::GpuManager(int pgpu_id,int nprocs) : BaseProcess(), BaseManager(), gpu_id(pgpu_id), Nprocs(nprocs){
+GpuManager::GpuManager(int pgpu_id,int nprocs) : BaseManager(), gpu_id(pgpu_id), Nprocs(nprocs){
 
 
 

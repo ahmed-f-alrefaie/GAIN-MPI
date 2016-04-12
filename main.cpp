@@ -64,6 +64,8 @@ int main(int argc, char** argv){
 
 	MPI_Bcast(&quit_prog, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
 	MPI_Bcast(input_filename, 1024, MPI_CHAR, 0, MPI_COMM_WORLD);
+	MPI_Bcast(output_filename, 1024, MPI_CHAR, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&do_file,  1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
 
 	if(quit_prog){
 		MPI_Finalize();
