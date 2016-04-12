@@ -27,7 +27,7 @@ void TroveBasisSet::ReadBasisSet(){
 	char filename[1024];
 	std::string line;
 	char* line_ptr;
-	int ncases,nlambdas,ncontr,nclasses,icontr,iroot;
+	
 
 	//Null pointer to be safe :3c
 	icontr2icase=NULL;
