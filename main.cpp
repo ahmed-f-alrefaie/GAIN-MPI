@@ -4,10 +4,13 @@
 #include "TroveClasses/TroveBasisSet.h"
 #include "BaseClasses/EigenVector.h"
 #include "BaseClasses/GpuManager.h"
+#include "BaseClasses/Output.h"
 #include "common/Timer.h"
 #include <omp.h>
 #include <vector>
 #include <cstring>
+#include <string>
+
 int main(int argc, char** argv){
 
 	MPI_Init(&argc, &argv);
@@ -15,10 +18,11 @@ int main(int argc, char** argv){
 	int rank;
 	int nProcs;
 	bool quit_prog = false;
-
+	bool do_file = false;
 	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 	MPI_Comm_size(MPI_COMM_WORLD,&nProcs);	
 	char input_filename[1024];
+	char output_filename[1024];
 
 	int omp_threads = omp_get_max_threads();
 	int nJ;
@@ -27,15 +31,29 @@ int main(int argc, char** argv){
 
 	/////////////////////Simple argument handling///////////////
 
-
 	//Lets read the arguments
 	if(rank ==0){
 		if(argc<2){
-			printf("Usage is <input file>\n");
+			printf("Usage is [-f] <input file> [<output filename>]\n");
 			quit_prog = true;
 
 		}else{
-			strcpy(input_filename,argv[1]);
+			if(argc==2){
+				strcpy(input_filename,argv[1]);
+			}else if(argc==4){
+				if(std::string(argv[1]) == "-f"){
+					strcpy(input_filename,argv[2]);	
+					strcpy(output_filename,argv[3]);
+					do_file = true;	
+				}else{
+					printf("Usage is [-f] <input file> [<output filename>]\n");
+					quit_prog = true;
+				}
+					
+			}else{
+				printf("Usage is [-f] <input file> [<output filename>]\n");
+				quit_prog = true;
+			}
 		}
 
 
@@ -57,6 +75,7 @@ int main(int argc, char** argv){
 	std::vector<TroveBasisSet*> m_basisSets;
 	Dipole* m_dipole;
 	EigenVector* eigen;
+	Output* m_output;
 
 
 
@@ -71,6 +90,14 @@ int main(int argc, char** argv){
 	m_states = new TroveStates((*m_input));
 	m_states->ReadStates();
 
+
+	//Initialize output
+	if(do_file)
+		m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),output_filename);
+	else
+		m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen());
+
+	m_output->Initialize();
 	std::vector<int> m_jvals = m_input->GetJvals();
 	GpuManager* m_gpu;
 	for(int i=0; i < nProcs; i++){
@@ -146,12 +173,6 @@ int main(int argc, char** argv){
 	eigen->CacheEigenvectors(m_states);
 
 	double ZPE = m_input->GetZPE();
-	
-	char output_filename[1024];
-	
-	sprintf(output_filename,"%s_%d",input_filename,rank);	
-	
-	FILE* outputfile = fopen(output_filename,"wb");
 
 
 	MPI_Barrier( MPI_COMM_WORLD);
@@ -244,11 +265,13 @@ int main(int argc, char** argv){
 				printf("Error!!!!\n");
 				exit(0);
 			}
-
+		
 
 			//Do work
 			//Output result
 			m_gpu->UpdateEigenVector(thread_id);
+
+
 
 			for(int idegF = 0; idegF < ndegF; idegF++)
 				for(int idegI = 0; idegI < ndegI; idegI++)
@@ -259,25 +282,8 @@ int main(int argc, char** argv){
 			double linestr,ls; 
 			ls = 0.0;
 
-			
-			for(int idegF=0; idegF < ndegF; idegF++){
-				for(int idegI=0; idegI < ndegI; idegI++){
-					linestr = linestrength[idegI + idegF*m_input->GetSymMaxDegen()];
-					
-					ls +=(linestr*linestr);
-				}
-			}
+			m_output->OutputLinestrength(iLevelI,iLevelF,linestrength);
 
-			
-
-			ls/=double(ndegI);
-
-			double nu_if = energyF - energyI;
-
-			double A_einst = ACOEF*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
-
-
-			fprintf(outputfile,"%12.6f %8d %4d %4d <- %8d %4d %4d %16.8E \n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst);
 			transitions++;
 
 			
@@ -306,8 +312,8 @@ int main(int argc, char** argv){
 		
 
 	}
+	m_output->Close();
 	MPI_Barrier( MPI_COMM_WORLD);
-	fclose(outputfile);
 	if(rank==0){
 		Timer::getInstance().PrintTimerInfo();
 	}
