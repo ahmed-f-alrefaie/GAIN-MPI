@@ -39,6 +39,7 @@ public:
 	EigenVector(Input & input);
 	virtual void CacheEigenvectors(States* pstates);
 	int ReadVector(double* array,int nLevel,size_t size);
+	void Close();
 
 
 };

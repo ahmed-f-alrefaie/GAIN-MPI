@@ -105,20 +105,24 @@ void EigenVector::CacheEigenvectors(States* pstates){
 	Log("Vector count: %d\n",global_vector_count);
 	if(global_vector_count == states->GetNumberStates()){
 		Log("Yes!!! We've cached everything! No more IO! Lets close everything\n");
-		for(int j = 0; j < jVals.size(); j++){
-			for(int g = 0; g < sym_nrepres; g++){
-				if(!isym_do[g])
-					continue;
-				//if(eigenvector_files[j][g]==NULL)
-				//	continue;
-				MPI_File_close(&eigenvector_files[j][g]);
-			}
-			
-		}
-		eigenvector_files.clear();
 
 	}
 
+}
+
+
+void EigenVector::Close(){
+	for(int j = 0; j < jVals.size(); j++){
+		for(int g = 0; g < sym_nrepres; g++){
+			if(!isym_do[g])
+				continue;
+				//if(eigenvector_files[j][g]==NULL)
+				//	continue;
+				MPI_File_close(&eigenvector_files[j][g]);
+		}
+			
+	}
+	eigenvector_files.clear();
 }
 
 void EigenVector::ReadVectorFromFile(double* array,int nLevel,size_t size){
