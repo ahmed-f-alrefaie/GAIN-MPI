@@ -25,7 +25,7 @@ void EigenVector::CacheEigenvectors(States* pstates){
 
 	for(int j = 0; j < jVals.size(); j++){
 		//Push back a J file
-		eigenvector_files.push_back(std::vector<FILE*>());
+		eigenvector_files.push_back(std::vector<MPI_File>());
 		for(int g = 0; g < sym_nrepres; g++){
 
 			eigenvector_files.back().push_back(NULL);
@@ -35,8 +35,8 @@ void EigenVector::CacheEigenvectors(States* pstates){
 			//We open it
 			sprintf(filename,"j0eigen_vectors%d_%d.chk",jVals[j],g+1);
 			Log("Opening %s\n",filename);
-			eigenvector_files.back().back() = fopen(filename,"rb");
-			if(eigenvector_files.back().back() == NULL){
+			
+			if(MPI_File_open(MPI_COMM_WORLD,filename,MPI_MODE_RDONLY,MPI_INFO_NULL,&eigenvector_files.back().back()) != MPI_SUCCESS){
 				LogErrorAndAbort("Could not open %s!!\n",filename);
 				
 			}
@@ -84,11 +84,12 @@ void EigenVector::CacheEigenvectors(States* pstates){
 		stored_vectors.back() = new double[rec_len];
 		BaseManager::TrackGlobalMemory(size_t(rec_len)*sizeof(double));		
 		
-
+		MPI_Status status;
+		MPI_File_read_at(eigenvector_files[jInd][gamma],size_t(record)*size_t(rec_len)*sizeof(double),stored_vectors.back(),size_t(rec_len),MPI_DOUBLE,&status);
 		//Read
-		fseek(eigenvector_files[jInd][gamma],size_t(record)*size_t(rec_len)*sizeof(double),SEEK_SET);
+		//fseek(eigenvector_files[jInd][gamma],size_t(record)*size_t(rec_len)*sizeof(double),SEEK_SET);
 		
-		fread(stored_vectors.back(),sizeof(double),size_t(rec_len),eigenvector_files[jInd][gamma]);
+		//fread(stored_vectors.back(),sizeof(double),size_t(rec_len),eigenvector_files[jInd][gamma]);
 
 		cached_vectors++;
 		
@@ -96,16 +97,6 @@ void EigenVector::CacheEigenvectors(States* pstates){
 	Log("We have cached %d out of %d vectors here!\n",cached_vectors,total_vectors);
 	if(cached_vectors==total_vectors){
 		Log("Alright! we've cached all vectors here...Lets close the files. Hopefully all other processes did the same! Lets check...\n");
-		for(int j = 0; j < jVals.size(); j++){
-			for(int g = 0; g < sym_nrepres; g++){
-				if(eigenvector_files[j][g]==NULL)
-					continue;
-				fclose(eigenvector_files[j][g]);
-			}
-			
-		}
-		eigenvector_files.clear();
-		
 	}
 
 	int global_vector_count;
@@ -113,8 +104,18 @@ void EigenVector::CacheEigenvectors(States* pstates){
 	MPI_Reduce(&cached_vectors,&global_vector_count,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
 	Log("Vector count: %d\n",global_vector_count);
 	if(global_vector_count == states->GetNumberStates()){
-		Log("Yes!!! We've cached everything! No more IO!\n");
-
+		Log("Yes!!! We've cached everything! No more IO! Lets close everything\n");
+		for(int j = 0; j < jVals.size(); j++){
+			for(int g = 0; g < sym_nrepres; g++){
+				if(!isym_do[g])
+					continue;
+				if(eigenvector_files[j][g]==NULL)
+					continue;
+				MPI_File_close(&eigenvector_files[j][g]);
+			}
+			
+		}
+		eigenvector_files.clear();
 
 	}
 
@@ -127,9 +128,10 @@ void EigenVector::ReadVectorFromFile(double* array,int nLevel,size_t size){
 		int record = states->GetRecord(nLevel);
 		int rec_len = states->GetRecordLength(nLevel);
 		//Otherwise we can continue
-		fseek(eigenvector_files[jInd][gamma],size_t(record)*size_t(rec_len)*sizeof(double),SEEK_SET);
-		
-		fread(array,sizeof(double),size_t(rec_len),eigenvector_files[jInd][gamma]);	
+		//fseek(eigenvector_files[jInd][gamma],size_t(record)*size_t(rec_len)*sizeof(double),SEEK_SET);
+		MPI_Status status;
+		MPI_File_read_at(eigenvector_files[jInd][gamma],size_t(record)*size_t(rec_len)*sizeof(double),array,size_t(rec_len),MPI_DOUBLE,&status);
+		//fread(array,sizeof(double),size_t(rec_len),eigenvector_files[jInd][gamma]);	
 
 		
 

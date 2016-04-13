@@ -203,10 +203,13 @@ int main(int argc, char** argv){
 		
 		m_gpu->UpdateEigenVector();
 
-
+		
 		if(rank==0) {printf("Lower state energy: %12.6f cm-1\n",energyI-ZPE); fflush(0);}
 
 		Timer::getInstance().StartTimer("Half linestrength");
+
+		
+		
 		for(int indF = 0; indF < nJ; indF++){
 
 			if(!m_states->FilterAnyTransitionsFromJ(iLevelI,m_jvals[indF]))
@@ -302,7 +305,8 @@ int main(int argc, char** argv){
 			
 			float predicted_time = 	(float(num_trans)/lines_per_second)*total_time_hours;
 			float percentage_of_transitions = (float)transitions*100.0/(float)g_transitions;
-			printf("### %d / %d transitions, L/s: %14.3E Pred Total time %8.4f hours [%12.6f]\n",g_transitions,num_trans,lines_per_second,predicted_time,percentage_of_transitions);					
+			printf("### %d / %d transitions, L/s: %14.3E Pred Total time %8.4f hours [%12.6f]\n",g_transitions,num_trans,lines_per_second,predicted_time,percentage_of_transitions);		
+						
 					
 			
 		}

@@ -27,7 +27,7 @@ private:
 	std::vector<double*> stored_vectors;
 	States* states;
 	//std::vector<vector_info> vector_heap_information;
-	std::vector< std::vector<FILE*> > eigenvector_files;
+	std::vector< std::vector<MPI_File> > eigenvector_files;
 		
 	std::vector<int> jVals;
 	std::vector<bool> isym_do;

@@ -115,6 +115,13 @@ void TroveInput::HandleSymmetery(){
 		
 		sym_degen.push_back(1);
 
+	}else if(symmetry_group=="D3H"){
+		sym_degen.push_back(1);
+		sym_degen.push_back(1);
+		sym_degen.push_back(2);
+		sym_degen.push_back(1);
+		sym_degen.push_back(1);
+		sym_degen.push_back(2);
 	}
 	
 
