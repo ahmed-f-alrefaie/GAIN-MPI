@@ -20,11 +20,11 @@ private:
 	double Q;
 	double temperature;
 	double ZPE;
-
+	bool reduced;
 	double beta;
 
 public:
-	Output(States* pstates,double ptemperature,double ppartition,double thresh,int pmaxDeg,const char* pfilename=NULL);
+	Output(States* pstates,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,const char* pfilename=NULL);
 	
 	void Initialize();
 

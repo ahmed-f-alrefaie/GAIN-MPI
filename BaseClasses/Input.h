@@ -44,12 +44,12 @@ protected:
 	std::vector<std::string> c_sym;
 
 	bool symmetry_reduced;
-
+	int symmetry_id;
 	//Size
 	size_t memory;
 
 public:
-	Input() : BaseProcess(){};
+	Input() : BaseProcess(), symmetry_reduced(false) {};
 	virtual void ReadInput(const char* filename)=0;
 	
 	//Getters
@@ -78,6 +78,8 @@ public:
 	double GetGNS(int gamma){return gns.at(gamma);};
 	std::vector<double> GetGNS(){return gns;};
 	bool DoSym(int gamma){return isym_do.at(gamma);}
+	bool IsReduced(){return symmetry_reduced;};
+	int IgammaPair(int gamma){return igamma_pair.at(gamma);};
 	double GetThreshold(){return thresh_linestrength;}
 	
 

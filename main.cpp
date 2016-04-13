@@ -95,9 +95,9 @@ int main(int argc, char** argv){
 
 	//Initialize output
 	if(do_file)
-		m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),output_filename);
+		m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),m_input->IsReduced(),output_filename);
 	else
-		m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen());
+		m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),m_input->IsReduced());
 
 	m_output->Initialize();
 	std::vector<int> m_jvals = m_input->GetJvals();
@@ -234,17 +234,26 @@ int main(int argc, char** argv){
 			}
 
 			if(myiLevelI < nLevels){
+
+				int p_igammaI = m_states->GetGamma(myiLevelI);
+				int p_ndegI = m_states->GetNdeg(myiLevelI); 
+				int p_igammaF = m_input->IgammaPair(p_igammaI);
+				int p_indI =  m_states->GetJIndex(myiLevelI);
+
+				
 				for(int indF = 0; indF < nJ; indF++){
 
 					if(!m_states->FilterAnyTransitionsFromJ(myiLevelI,m_jvals[indF]))
 						continue;
 
-					for(int idegI = 0; idegI < ndegI; idegI++){			
-						if(expected_process == rank){
+					for(int idegI = 0; idegI < p_ndegI; idegI++){		
+						if(!m_states->DegeneracyFilter(p_igammaI,p_igammaF,idegI,0))
+							continue;	
+						//if(expected_process == rank){
 							//Do halflinestrength
-							m_gpu->ExecuteHalfLs(cached_half_linestrength[indF][idegI],indI,indF,idegI,gammaI);
-							memcpy(half_linestrength[indF][idegI],cached_half_linestrength[indF][idegI],sizeof(double)*size_t(DimenMax));
-						}
+							m_gpu->ExecuteHalfLs(cached_half_linestrength[indF][idegI],indI,indF,idegI,p_igammaI);
+
+						//}
 
 					}
 					//MPI_Abort(MPI_COMM_WORLD,0);
@@ -255,7 +264,8 @@ int main(int argc, char** argv){
 		flag_preprocess=false;
 		for(int indF = 0; indF < nJ; indF++){
 					//Broadcast
-			for(int idegI = 0; idegI < ndegI; idegI++){
+			for(int idegI = 0; idegI < ndegI; idegI++){			
+				memcpy(half_linestrength[indF][idegI],cached_half_linestrength[indF][idegI],sizeof(double)*size_t(DimenMax));
 				MPI_Bcast(half_linestrength[indF][idegI], DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
 					//Update our gpu
 				m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
@@ -300,9 +310,13 @@ int main(int argc, char** argv){
 
 
 
-			for(int idegF = 0; idegF < ndegF; idegF++)
-				for(int idegI = 0; idegI < ndegI; idegI++)
+			for(int idegF = 0; idegF < ndegF; idegF++){
+				for(int idegI = 0; idegI < ndegI; idegI++){
+					if(!m_states->DegeneracyFilter(gammaI,gammaF,idegI,idegF))
+						continue;
 					m_gpu->ExecuteDotProduct(indF,idegI,idegF,gammaF,thread_id);
+				}
+			}
 
 			m_gpu->WaitForLineStrengthResult(thread_id);
 

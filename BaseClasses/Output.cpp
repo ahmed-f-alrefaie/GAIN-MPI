@@ -1,6 +1,6 @@
 #include "Output.h"
 
-Output::Output(States* pstates,double ptemperature,double ppartition,double thresh,int pmaxDeg,const char* pfilename) : BaseProcess(){
+Output::Output(States* pstates,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,const char* pfilename) : BaseProcess(){
 	Log("Initializing output class\n");
 	
 	states = pstates;
@@ -9,7 +9,7 @@ Output::Output(States* pstates,double ptemperature,double ppartition,double thre
 	maxDeg=pmaxDeg;
 	threshold=thresh;
 	to_file = false;
-
+	reduced = red;
 	if(pfilename != NULL){
 		sprintf(filename,"%s__%d__.out",pfilename,m_process_id);
 		to_file = true;
@@ -62,6 +62,8 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 
 	for(int idegF=0; idegF < ndegF; idegF++){
 		for(int idegI=0; idegI < ndegI; idegI++){
+			if(!states->DegeneracyFilter(gammaI,gammaF,idegI,idegF))
+				continue;
 			linestr = linestrength[idegI + idegF*maxDeg];
 			sprintf(lsbuf + strlen(lsbuf)," %16.9E",linestr);		
 			ls +=(linestr*linestr);
@@ -71,6 +73,8 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 			
 
 	ls/=double(ndegI);
+	if (reduced && ndegF!=1 && ndegI !=1 ) 
+		ls*=double(ndegI);
 
 	A_einst = Acoef_s_1*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
 

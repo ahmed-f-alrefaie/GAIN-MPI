@@ -239,6 +239,12 @@ void TroveInput::ReadIntensity(){
 			}		
 
 		
+		}else if(input_flag == "SYMMETRY"){
+			if(trim(split_line[1])=="REDUCED"){
+				symmetry_reduced = true;
+			}
+
+		
 		}else if(input_flag == "GNS"){
 			for(int i = 1; i < split_line.size(); i++){
 				double t_gns = atof(split_line[i].c_str());

@@ -31,7 +31,7 @@ States::States(Input & input): BaseProcess(){
 	freq_window = input.GetFreqWindow();
 	isym_pairs = input.GetISymPairs();
 	igamma_pair = input.GetIGammaPair();
-
+	reduced = input.IsReduced();
 	nsize_max = 0;
 
 }
@@ -87,6 +87,19 @@ bool States::FilterAnyTransitionsFromJ(int I, int J){
 	}
 	return false;
 
+}
+
+
+bool States::DegeneracyFilter(int gammaI,int gammaF,int idegI,int idegF){
+	if(sym_degen[gammaI] == 1 || sym_degen[gammaF] == 1)
+		return true;
+	if(!reduced)
+		return true;
+	
+	if(idegI==1 && idegF==0)
+		return true;
+	else
+		return false;
 }
 
 

@@ -48,6 +48,7 @@ protected:
 	std::vector<double> gns;
 	int nsize_max;
 	double ZPE;
+	bool reduced;
 	bool filter_state(double energy,int igamma);
 	bool filter_lower(double energy,int igamma);
 	bool filter_upper(double energy,int igamma);
@@ -58,7 +59,7 @@ public:
 	bool FilterAnyTransitionsFromJ(int I, int J);
 	bool FilterLowerState(int I) { return filter_lower(eigenvalues.at(I).energy, eigenvalues.at(I).igamma);}
 	bool FilterUpperState(int I) { return filter_upper(eigenvalues.at(I).energy, eigenvalues.at(I).igamma);}
-	bool DegeneracyFilter(int gammaI,int gammaF);
+	bool DegeneracyFilter(int gammaI,int gammaF,int idegI,int idegF);
 	const char* branch(int jF,int jI);
 	int GetNumberStates(){return eigenvalues.size();};
 	int GetRecord(int state){return eigenvalues.at(state).irec;};
