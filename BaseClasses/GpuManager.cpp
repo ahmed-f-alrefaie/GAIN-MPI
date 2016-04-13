@@ -218,14 +218,18 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 	copy_jmax_constant(Jmax);
 
 	Log("Initializing cuBlas..");
-	stat = cublasCreate(&handle);
-	if (stat != CUBLAS_STATUS_SUCCESS) {
-		LogErrorAndAbort("CUBLAS initialization failed\n");
+
+	for(int i =0; i < Nprocs; i++){
+		handle.push_back(NULL);
+		stat = cublasCreate(&handle.back());
+
+		if (stat != CUBLAS_STATUS_SUCCESS) {
+			LogErrorAndAbort("CUBLAS initialization failed\n");
 		
+		}
+
+		cublasSetPointerMode(handle.back(),CUBLAS_POINTER_MODE_DEVICE);
 	}
-
-	cublasSetPointerMode(handle,CUBLAS_POINTER_MODE_DEVICE);
-
 	Log("success!!\n");
 
 	CheckCudaError("Initialization");
@@ -484,8 +488,9 @@ void GpuManager::ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int 
 	//Transform to primitive
 	transform_vector_primitive(basisSets[indF].dimensions,igammaF,inflationData[indF].MaxSymCoeffs,idegF,inflationData[indF].sDeg[igammaF],inflationData[indF].Ntotal[igammaF],inflationData[indF].ijTerms, inflationData[indF].contr,inflationData[indF].N[igammaF],inflationData[indF].repres[igammaF], vectorF[proc],prim_vectorF[proc],dot_product_omp_stream[proc]);
 	//do dot product
-	cublasSetStream(handle,dot_product_omp_stream[proc]);
-	cublasDdot (handle, basisSets[indF].dimensions,prim_vectorF[proc], 1, half_ls_vectors[indF][idegI], 1, linestrength[proc] + idegI + idegF*MaxDegen );
+	cublasSetStream(handle[proc],dot_product_omp_stream[proc]);
+
+	cublasDdot (handle[proc], basisSets[indF].dimensions,prim_vectorF[proc], 1, half_ls_vectors[indF][idegI], 1, linestrength[proc] + idegI + idegF*MaxDegen );
 	//Copy result to host
 	
 

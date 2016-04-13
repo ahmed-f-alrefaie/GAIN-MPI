@@ -1,5 +1,4 @@
 #include "EigenVector.h"
-#include <algorithm>
 
 EigenVector::EigenVector(Input & input) : BaseProcess(){
 	
@@ -15,11 +14,11 @@ void EigenVector::CacheEigenvectors(States* pstates){
 	Log("Caching Eigenvectors...");
 	states = pstates;
 	
-	Log("allocating heap......done!\n");
+	//Log("allocating heap......done!\n");
 	
 	Log("Total memory for eigenvectors is %12.6f GB\n",((double)BaseManager::GetAvailableGlobalMemory())/1e9);
 
-	total_vals = BaseManager::GetAvailableGlobalMemory()/sizeof(double);
+	//total_vals = BaseManager::GetAvailableGlobalMemory()/sizeof(double);
 	cur_vals = 0;
 	
 	char filename[1024];
@@ -48,43 +47,51 @@ void EigenVector::CacheEigenvectors(States* pstates){
 	}
 
 
-	vector_heap = new double[total_vals];
+	//vector_heap = new double[total_vals];
 
-	double * heap_ptr = vector_heap;
+	//double * heap_ptr = vector_heap;
 	cached_vectors = 0;
 	total_vectors=0;
 	//total_vectors = states->GetNumberStates()/m_num_processes;
+	//count vectors
+	for(int i = m_process_id; i < states->GetNumberStates(); i+=m_num_processes)
+		total_vectors++;
 
 	//Let us begin
-	for(int i = 0; i < states->GetNumberStates(); i++){
+	for(int i = m_process_id; i < states->GetNumberStates(); i+=m_num_processes){
 
-		if (i % m_num_processes != m_process_id)
-			continue;
+		//if (i % m_num_processes != m_process_id)
+		//	continue;
 		//Lets read it		
 		int jInd = states->GetJIndex(i);
 		int gamma = states->GetGamma(i);
 		int record = states->GetRecord(i);
 		int rec_len = states->GetRecordLength(i);
-		
-		total_vectors++;
+		//
+		//total_vectors++;
 		//Can we fit it?
-		if(cur_vals + rec_len > total_vals)
-			break;
+		//if(cur_vals + rec_len > total_vals)
+		//	break;
 
 		//Otherwise we can continue
+		size_t memory_needed = size_t(rec_len)*sizeof(double);
+
+		if(memory_needed >= BaseManager::GetAvailableGlobalMemory())
+			break;
+
+
+		stored_vectors.push_back(NULL);
+		stored_vectors.back() = new double[rec_len];
+		BaseManager::TrackGlobalMemory(size_t(rec_len)*sizeof(double));		
+		
 
 		//Read
 		fseek(eigenvector_files[jInd][gamma],size_t(record)*size_t(rec_len)*sizeof(double),SEEK_SET);
 		
-		fread(heap_ptr,sizeof(double),size_t(rec_len),eigenvector_files[jInd][gamma]);
-		//Put the information
-		vector_heap_information.push_back({heap_ptr,rec_len});
-		//printf("[%i,%i] Heap: %p Record: %i Record_length: %i\n",jInd,gamma,vector_heap_information.back().start,record,vector_heap_information.back().vector_size);
-		//Increment the pointer
-		heap_ptr+=rec_len;
-		cur_vals+=rec_len;
-		//Count the cache
+		fread(stored_vectors.back(),sizeof(double),size_t(rec_len),eigenvector_files[jInd][gamma]);
+
 		cached_vectors++;
+		
 	}
 	Log("We have cached %d out of %d vectors here!\n",cached_vectors,total_vectors);
 	if(cached_vectors==total_vectors){
@@ -129,6 +136,11 @@ void EigenVector::ReadVectorFromFile(double* array,int nLevel,size_t size){
 
 }
 
+void EigenVector::ReadVectorFromHeap(double* array,int nLevel,size_t size){
+
+	memcpy(array,stored_vectors.at(nLevel),size*sizeof(double));
+
+}
 
 
 int EigenVector::ReadVector(double* array,int nLevel,size_t size){
@@ -139,16 +151,10 @@ int EigenVector::ReadVector(double* array,int nLevel,size_t size){
 		
 		int level=nLevel/m_num_processes;
 
-		if(level < cached_vectors){
-			if(size != vector_heap_information[level].vector_size){
-				LogErrorAndAbort("Problem, size discrepency!\n");
-				
-			}
+		if(level < stored_vectors.size()){
 			
-
-			std::copy(vector_heap_information[nLevel].start,vector_heap_information[nLevel].start + vector_heap_information[nLevel].vector_size,array);
 			//Read from  cahce
-			//ReadVectorFromHeap(array,level,size);
+			ReadVectorFromHeap(array,level,size);
 			
 		
 		}else{

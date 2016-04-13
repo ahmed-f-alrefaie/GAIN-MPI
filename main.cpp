@@ -227,7 +227,7 @@ int main(int argc, char** argv){
 				MPI_Bcast(half_linestrength[indF][idegI], DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
 				//Update our gpu
 				
-				if(expected_process != rank) m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
+				m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
 
 
 				
@@ -243,7 +243,7 @@ int main(int argc, char** argv){
 
 		Timer::getInstance().StartTimer("Intensity Loop");
 		
-		#pragma omp parallel for reduction(+:transitions)
+		#pragma omp parallel for default(shared) firstprivate(rank,nLevels,nProcs,iLevelI) reduction(+:transitions)
 		for(int iLevelF=rank; iLevelF < nLevels; iLevelF+=nProcs){
 
 			if(!m_states->FilterIntensity(iLevelI,iLevelF))
@@ -262,11 +262,11 @@ int main(int argc, char** argv){
 
 
 			double* vector_F = m_gpu->GetFinalVector(thread_id);
-			double* linestrength = m_gpu->GetLinestrength(thread_id);
+			
 
 			if(rank != eigen->ReadVector(vector_F,iLevelF,nSizeF)){
 				printf("Error!!!!\n");
-				exit(0);
+				MPI_Abort(MPI_COMM_WORLD,0);
 			}
 		
 
@@ -282,10 +282,7 @@ int main(int argc, char** argv){
 
 			m_gpu->WaitForLineStrengthResult(thread_id);
 
-			double linestr,ls; 
-			ls = 0.0;
-
-			m_output->OutputLinestrength(iLevelI,iLevelF,linestrength);
+			m_output->OutputLinestrength(iLevelI,iLevelF,m_gpu->GetLinestrength(thread_id));
 
 			transitions++;
 
