@@ -109,8 +109,8 @@ void EigenVector::CacheEigenvectors(States* pstates){
 			for(int g = 0; g < sym_nrepres; g++){
 				if(!isym_do[g])
 					continue;
-				if(eigenvector_files[j][g]==NULL)
-					continue;
+				//if(eigenvector_files[j][g]==NULL)
+				//	continue;
 				MPI_File_close(&eigenvector_files[j][g]);
 			}
 			
