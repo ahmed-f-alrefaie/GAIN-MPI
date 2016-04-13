@@ -157,14 +157,17 @@ int main(int argc, char** argv){
 	
 
 	std::vector< std::vector<double*> > half_linestrength;
-
+	std::vector< std::vector<double*> > cached_half_linestrength;
 	for(int i = 0; i < nJ; i++){
 
 		half_linestrength.push_back(std::vector<double*>());
-
+		cached_half_linestrength.push_back(std::vector<double*>());
 		for(int idegI = 0; idegI < m_input->GetSymMaxDegen(); idegI++){
 			half_linestrength.back().push_back(NULL);
+			cached_half_linestrength.back().push_back(NULL);
 			half_linestrength.back().back() = new double[DimenMax];
+			cached_half_linestrength.back().back() = new double[DimenMax];
+			BaseManager::TrackGlobalMemory(sizeof(double)*BasisSet::GetDimenMax());
 			BaseManager::TrackGlobalMemory(sizeof(double)*BasisSet::GetDimenMax());
 			
 		}
@@ -185,9 +188,12 @@ int main(int argc, char** argv){
 	}
 	MPI_Barrier( MPI_COMM_WORLD);
 	int transitions = 0;
-	
+	bool flag_preprocess = true;
+	int next_preprocess = 0;
 	for(int iLevelI = 0; iLevelI < nLevels; iLevelI++){
 		
+		if(iLevelI % nProcs == next_preprocess)
+			flag_preprocess = true;
 		//All MPI processes should do this
 		if(!m_states->FilterLowerState(iLevelI))
 			continue;
@@ -200,7 +206,9 @@ int main(int argc, char** argv){
 		double energyI = m_states->GetEnergy(iLevelI);
 		int indexI = m_states->GetLevel(iLevelI);
 		int expected_process = eigen->ReadVector(vector_I,iLevelI,nSizeI);
+
 		
+
 		m_gpu->UpdateEigenVector();
 
 		
@@ -208,39 +216,51 @@ int main(int argc, char** argv){
 
 		Timer::getInstance().StartTimer("Half linestrength");
 
-		
-		
-		for(int indF = 0; indF < nJ; indF++){
+		//We might as well do the next 8 since they may or may not coincide with another half linestrength
+		if(flag_preprocess == true){
 
-			if(!m_states->FilterAnyTransitionsFromJ(iLevelI,m_jvals[indF]))
-				continue;
-
-			for(int idegI = 0; idegI < ndegI; idegI++){			
-				if(expected_process == rank){
-					//Do halflinestrength
-					m_gpu->ExecuteHalfLs(half_linestrength[indF][idegI],indI,indF,idegI,gammaI);
-				
+			int myiLevelI=iLevelI;
+			next_preprocess = expected_process;
+			if(expected_process != rank){
+				if(rank < expected_process){
+					myiLevelI = ((myiLevelI/nProcs) + 1)*nProcs + rank;
+				} else{
+					myiLevelI+=rank-expected_process;
+				}				
+				if(rank!= eigen->ReadVector(vector_I,myiLevelI,nSizeI)){
+					printf("%i ERROR WITH READING\n",rank);
+					MPI_Abort(MPI_COMM_WORLD,0);
 				}
-				
-				
-
-			
-
-				//Broadcast
-				MPI_Bcast(half_linestrength[indF][idegI], DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
-				//Update our gpu
-				
-				m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
-
-
-				
-			
-
 			}
-			//MPI_Abort(MPI_COMM_WORLD,0);
 
+			if(myiLevelI < nLevels){
+				for(int indF = 0; indF < nJ; indF++){
+
+					if(!m_states->FilterAnyTransitionsFromJ(myiLevelI,m_jvals[indF]))
+						continue;
+
+					for(int idegI = 0; idegI < ndegI; idegI++){			
+						if(expected_process == rank){
+							//Do halflinestrength
+							m_gpu->ExecuteHalfLs(cached_half_linestrength[indF][idegI],indI,indF,idegI,gammaI);
+							memcpy(half_linestrength[indF][idegI],cached_half_linestrength[indF][idegI],sizeof(double)*size_t(DimenMax));
+						}
+
+					}
+					//MPI_Abort(MPI_COMM_WORLD,0);
+				}
+			}
 		}
-
+		//If we've already done it then just ignore
+		flag_preprocess=false;
+		for(int indF = 0; indF < nJ; indF++){
+					//Broadcast
+			for(int idegI = 0; idegI < ndegI; idegI++){
+				MPI_Bcast(half_linestrength[indF][idegI], DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
+					//Update our gpu
+				m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
+			}
+		}
 	
 		Timer::getInstance().EndTimer("Half linestrength");
 
@@ -248,7 +268,8 @@ int main(int argc, char** argv){
 		
 		#pragma omp parallel for default(shared) firstprivate(rank,nLevels,nProcs,iLevelI) reduction(+:transitions)
 		for(int iLevelF=rank; iLevelF < nLevels; iLevelF+=nProcs){
-
+			if(iLevelF==iLevelI)
+				continue;
 			if(!m_states->FilterIntensity(iLevelI,iLevelF))
 				continue;
 	

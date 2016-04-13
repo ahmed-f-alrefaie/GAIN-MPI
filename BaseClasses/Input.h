@@ -43,7 +43,7 @@ protected:
 	int sym_maxdegen;
 	std::vector<std::string> c_sym;
 
-
+	bool symmetry_reduced;
 
 	//Size
 	size_t memory;
