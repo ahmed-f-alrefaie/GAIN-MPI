@@ -32,11 +32,11 @@ private:
 	std::vector<bool> isym_do;
 	int sym_nrepres;
 	void ReadVectorFromFile(double* array,int nLevel,size_t size);
-	virtual void ReadVectorFromHeap(double* array,int nLevel,size_t size);
+	//virtual void ReadVectorFromHeap(double* array,int nLevel,size_t size);
 	//
 public:
 	EigenVector(Input & input);
-	virtual void CacheEigenvectors(States* pstates);
+	void CacheEigenvectors(States* pstates);
 	int ReadVector(double* array,int nLevel,size_t size);
 
 

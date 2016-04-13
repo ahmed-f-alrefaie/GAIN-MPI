@@ -1,4 +1,5 @@
 #include "EigenVector.h"
+#include <algorithm>
 
 EigenVector::EigenVector(Input & input) : BaseProcess(){
 	
@@ -81,6 +82,7 @@ void EigenVector::CacheEigenvectors(States* pstates){
 		//printf("[%i,%i] Heap: %p Record: %i Record_length: %i\n",jInd,gamma,vector_heap_information.back().start,record,vector_heap_information.back().vector_size);
 		//Increment the pointer
 		heap_ptr+=rec_len;
+		cur_vals+=rec_len;
 		//Count the cache
 		cached_vectors++;
 	}
@@ -127,11 +129,6 @@ void EigenVector::ReadVectorFromFile(double* array,int nLevel,size_t size){
 
 }
 
-void EigenVector::ReadVectorFromHeap(double* array,int nLevel,size_t size){
-
-	memcpy(array,vector_heap_information[nLevel].start,size_t(vector_heap_information[nLevel].vector_size)*sizeof(double));
-
-}
 
 
 int EigenVector::ReadVector(double* array,int nLevel,size_t size){
@@ -148,8 +145,10 @@ int EigenVector::ReadVector(double* array,int nLevel,size_t size){
 				
 			}
 			
+
+			std::copy(vector_heap_information[nLevel].start,vector_heap_information[nLevel].start + vector_heap_information[nLevel].vector_size,array);
 			//Read from  cahce
-			ReadVectorFromHeap(array,level,size);
+			//ReadVectorFromHeap(array,level,size);
 			
 		
 		}else{
