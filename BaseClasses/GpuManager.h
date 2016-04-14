@@ -52,6 +52,7 @@ private:
 
 	//////////////////Host memory///////////////////
 	double* host_vectorI;
+	std::vector< std::vector<double*> > host_half_ls_vectors;
 	std::vector<double*> host_vectorF;
 	std::vector<double*> host_linestrength;
 
@@ -78,10 +79,18 @@ private:
 
 	int Nprocs;	
 	//Streams and events
-	std::vector<cudaStream_t> half_ls_stream;
+
 	std::vector<cudaStream_t> dot_product_omp_stream;
 
-	std::vector<cudaEvent_t> correlated_event;
+	std::vector<std::vector<int> > stream_id;
+
+	std::vector<std::vector<std::vector<cudaStream_t> > > half_ls_stream;
+
+	std::vector<std::vector<cudaEvent_t> > correlated_event;
+
+	std::vector<std::vector<std::vector<cudaEvent_t> > > completed_half_ls_event;
+	std::vector<std::vector<cudaStream_t>  > transfer_half_ls_stream;
+	std::vector<std::vector<cudaStream_t>  >correlate_half_ls_stream;
 
 	//whetherthe dipole has transfered
 	cudaEvent_t transfer_dipole_event;
@@ -98,7 +107,7 @@ private:
 	//Mic variable
 	
 	int hls_stream_id;
-	int GetHStreamId(){if(hls_stream_id>=MAX_STREAMS) hls_stream_id=0; return hls_stream_id++;};
+	int GetHStreamId(int indF,int degI){if(stream_id[indF][degI]>=MAX_STREAMS) stream_id[indF][degI]=0; return stream_id[indF][degI]++;};
 	void CheckCudaError(const char* tag);
 	int GetFreeDevice();
 	//CublasRelated
@@ -114,8 +123,8 @@ public :
 	void TransferDipole(Dipole* dipole_,int block);
 	void AllocateVectors(int nJ,int nsizemax,int dimenmax);
 
-	static void PinVectorMemory(double* vector,int* n);
-	static void UnpinVectorMemory(double* vector,int* n);
+	static void PinVectorMemory(double* vector,int n);
+	static void UnpinVectorMemory(double* vector,int n);
 
 
 	
@@ -126,7 +135,9 @@ public :
 	void UpdateHalfLinestrength(double* half_ls,int jInd,int ideg);
 
 	void ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int igammaI);
-
+	void GetHalfLineStrengthResult(int indF,int idegI){
+		cudaStreamSynchronize(transfer_half_ls_stream[indF][idegI]);
+	}
 	void UpdateEigenVector();
 	void UpdateEigenVector(int proc_id);	
 

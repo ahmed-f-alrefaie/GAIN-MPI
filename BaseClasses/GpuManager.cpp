@@ -93,7 +93,7 @@ GpuManager::GpuManager(int pgpu_id,int nprocs) : BaseManager(), gpu_id(pgpu_id),
 		}
 	}
 	Log("GPUManager Init with ID: %i and Nprocs: %i\n",gpu_id,Nprocs);
-	hls_stream_id = 0;
+	//hls_stream_id = 0;
 
 }
 
@@ -142,7 +142,13 @@ void GpuManager::TransferToHost(void* dst,const void* src,size_t size){
 		}
 }
 
+void GpuManager::PinVectorMemory(double* vector,int n){
+	cudaHostRegister(vector,size_t(n)*sizeof(double),cudaHostRegisterPortable);
+}
 
+void GpuManager::UnpinVectorMemory(double* vector,int n){
+	cudaHostUnregister(vector);
+}
 
 void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax_degen){
 	//set the device
@@ -178,17 +184,7 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 
 	//Allocate streams
 	//Half_linestrength
-	for(int i = 0; i < MAX_STREAMS; i++){
-		half_ls_stream.push_back(NULL);
-		cudaStreamCreate(&half_ls_stream.back());
-	}
-	
 
-	//DotProduct
-	for(int i =0; i < Nprocs; i++){
-		dot_product_omp_stream.push_back(NULL);
-		cudaStreamCreate(&dot_product_omp_stream.back());
-	}
 
 	Log("Transfering ThreeJ symbols");
 	//Transfer threeJ symbols
@@ -329,6 +325,62 @@ void GpuManager::AllocateVectors(int nJ,int nsizemax,int dimenmax){
 		linestrength.push_back(NULL);
 		AllocateGpuMemory((void**)&linestrength.back(),sizeof(double)*size_t(MaxDegen*MaxDegen));
 	}
+
+	//Lets allocate the streams and events here
+	for(int i =0; i < nJ; i++){
+		half_ls_stream.push_back(std::vector<std::vector<cudaStream_t> >());
+		
+		correlated_event.push_back(std::vector<cudaEvent_t>());
+
+		completed_half_ls_event.push_back(std::vector<std::vector<cudaEvent_t> >());
+
+		transfer_half_ls_stream.push_back(std::vector<cudaStream_t>());
+
+		correlate_half_ls_stream.push_back(std::vector<cudaStream_t>());
+
+		stream_id.push_back(std::vector<int>());
+
+		for(int deg = 0; deg < MaxDegen; deg++){
+
+			half_ls_stream.back().push_back(std::vector<cudaStream_t>());
+			stream_id.back().push_back(0);
+
+			correlated_event.back().push_back(NULL);
+			cudaEventCreateWithFlags (&correlated_event.back().back(),cudaEventDisableTiming);
+
+			completed_half_ls_event.back().push_back(std::vector<cudaEvent_t>());
+			
+
+			transfer_half_ls_stream.back().push_back(NULL);
+			cudaStreamCreate(&transfer_half_ls_stream.back().back());
+
+			correlate_half_ls_stream.back().push_back(NULL);
+			cudaStreamCreate(&transfer_half_ls_stream.back().back());
+
+			for(int i = 0; i < MAX_STREAMS; i++){
+
+				half_ls_stream.back().back().push_back(NULL);
+
+				cudaStreamCreate(&half_ls_stream.back().back().back());
+
+				completed_half_ls_event.back().back().push_back(NULL);
+				cudaEventCreateWithFlags (&completed_half_ls_event.back().back().back(),cudaEventDisableTiming);
+			}
+		}
+	}
+	
+
+	//DotProduct
+	for(int i =0; i < Nprocs; i++){
+		dot_product_omp_stream.push_back(NULL);
+		cudaStreamCreate(&dot_product_omp_stream.back());
+	}
+
+
+
+
+
+
 	Log("Done!!!");
 }
 
@@ -409,13 +461,16 @@ void GpuManager::TransferDipole(Dipole* dipole_,int block){
 }
 
 void GpuManager::UpdateHalfLinestrength(double* half_ls,int jInd,int ideg){
+	cudaSetDevice(gpu_id);
 	TransferToGpu(half_ls_vectors[jInd][ideg],half_ls,sizeof(double)*DimenMax);
 
 
 }	
 
 void GpuManager::UpdateEigenVector(){
+	cudaSetDevice(gpu_id);
 	TransferToGpu(vectorI,host_vectorI,sizeof(double)*size_t(NsizeMax));
+	cudaDeviceSynchronize();
 }
 void GpuManager::UpdateEigenVector(int proc_id){
 	cudaSetDevice(gpu_id);
@@ -427,12 +482,15 @@ void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int i
 	cudaSetDevice(gpu_id);
 
 	//transform to primitive
-	transform_vector_primitive(basisSets[indI].dimensions,igammaI,inflationData[indI].MaxSymCoeffs,idegI,inflationData[indI].sDeg[igammaI],inflationData[indI].Ntotal[igammaI],inflationData[indI].ijTerms, inflationData[indI].contr,inflationData[indI].N[igammaI],inflationData[indI].repres[igammaI], vectorI,prim_half_ls_vectors[indF][idegI],0);
-	
+	transform_vector_primitive(basisSets[indI].dimensions,igammaI,inflationData[indI].MaxSymCoeffs,idegI,inflationData[indI].sDeg[igammaI],inflationData[indI].Ntotal[igammaI],inflationData[indI].ijTerms, inflationData[indI].contr,inflationData[indI].N[igammaI],inflationData[indI].repres[igammaI], vectorI,prim_half_ls_vectors[indF][idegI],correlate_half_ls_stream[indF][idegI]);
 
-	//Wait will replace with an event
-	cudaDeviceSynchronize();
-	CheckCudaError("Transformation");
+	cudaEventRecord(correlated_event[indF][indI],correlate_half_ls_stream[indF][idegI]);
+
+
+	//Synchronize the streams until the correlation is complete
+	for(int i = 0; i < MAX_STREAMS; i++){
+		 cudaStreamWaitEvent(half_ls_stream[indF][idegI][i],correlated_event[indF][idegI],0);
+	}
 
 	for(int kF=0; kF < basisSets[indF].J+1; kF++){
 	//Do Half_linestrength
@@ -464,10 +522,23 @@ void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int i
 						prim_half_ls_vectors[indF][idegI],
 						threejsymbols,
 						half_ls_vectors[indF][idegI],
-						half_ls_stream[GetHStreamId()]);
+						half_ls_stream[indF][idegI][GetHStreamId(indF,idegI)]);
 	
 
 	}
+
+	for(int i = 0; i < MAX_STREAMS; i++){
+		//Record event
+		cudaEventRecord(completed_half_ls_event[indF][idegI][i],half_ls_stream[indF][idegI][i]);
+		//Push to the parent sream
+		cudaStreamWaitEvent(transfer_half_ls_stream[indF][idegI],completed_half_ls_event[indF][idegI][i],0);
+
+	}
+	//Now we can Async to the
+
+
+	cudaMemcpyAsync(half_ls,half_ls_vectors[indF][idegI],sizeof(double)*size_t(basisSets[indF].dimensions),cudaMemcpyDeviceToHost,transfer_half_ls_stream[indF][idegI]);
+
 	/*double* tmp_prim_ls=new double[DimenMax];
 	double* tmp_half_ls=new double[DimenMax];
 	Log("### INDI=%i INDF=%i IGAMMAI=%i#####\n",indI,indF,igammaI); 
@@ -477,10 +548,7 @@ void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int i
 	for(int i = 0; i < DimenMax; i++)
 		Log("%14.3E -> %14.3E\n",tmp_prim_ls[i],tmp_half_ls[i]);
 	*/
-	cudaDeviceSynchronize();
-	CheckCudaError("Half line strength");
-	TransferToHost(half_ls,half_ls_vectors[indF][idegI],sizeof(double)*size_t(basisSets[indF].dimensions));
-	cudaDeviceSynchronize();
+
 
 }
 void GpuManager::ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int proc){

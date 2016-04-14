@@ -157,17 +157,13 @@ int main(int argc, char** argv){
 	
 
 	std::vector< std::vector<double*> > half_linestrength;
-	std::vector< std::vector<double*> > cached_half_linestrength;
 	for(int i = 0; i < nJ; i++){
 
 		half_linestrength.push_back(std::vector<double*>());
-		cached_half_linestrength.push_back(std::vector<double*>());
 		for(int idegI = 0; idegI < m_input->GetSymMaxDegen(); idegI++){
 			half_linestrength.back().push_back(NULL);
-			cached_half_linestrength.back().push_back(NULL);
 			half_linestrength.back().back() = new double[DimenMax];
-			cached_half_linestrength.back().back() = new double[DimenMax];
-			BaseManager::TrackGlobalMemory(sizeof(double)*BasisSet::GetDimenMax());
+			GpuManager::PinVectorMemory(half_linestrength.back().back(),DimenMax);
 			BaseManager::TrackGlobalMemory(sizeof(double)*BasisSet::GetDimenMax());
 			
 		}
@@ -192,8 +188,6 @@ int main(int argc, char** argv){
 	int next_preprocess = 0;
 	for(int iLevelI = 0; iLevelI < nLevels; iLevelI++){
 		
-		if(iLevelI % nProcs == next_preprocess)
-			flag_preprocess = true;
 		//All MPI processes should do this
 		if(!m_states->FilterLowerState(iLevelI))
 			continue;
@@ -208,7 +202,7 @@ int main(int argc, char** argv){
 		int expected_process = eigen->ReadVector(vector_I,iLevelI,nSizeI);
 
 		
-
+		
 		m_gpu->UpdateEigenVector();
 
 		
@@ -216,56 +210,35 @@ int main(int argc, char** argv){
 
 		Timer::getInstance().StartTimer("Half linestrength");
 
-		//We might as well do the next 8 since they may or may not coincide with another half linestrength
-		if(flag_preprocess == true){
 
-			int myiLevelI=iLevelI;
-			next_preprocess = expected_process;
-			if(expected_process != rank){
-				if(rank < expected_process){
-					myiLevelI = ((myiLevelI/nProcs) + 1)*nProcs + rank;
-				} else{
-					myiLevelI+=rank-expected_process;
-				}				
-				if(rank!= eigen->ReadVector(vector_I,myiLevelI,nSizeI)){
-					printf("%i ERROR WITH READING\n",rank);
-					MPI_Abort(MPI_COMM_WORLD,0);
-				}
-			}
-
-			if(myiLevelI < nLevels){
-
-				int p_igammaI = m_states->GetGamma(myiLevelI);
-				int p_ndegI = m_states->GetNdeg(myiLevelI); 
-				int p_igammaF = m_input->IgammaPair(p_igammaI);
-				int p_indI =  m_states->GetJIndex(myiLevelI);
 
 				
-				for(int indF = 0; indF < nJ; indF++){
+		for(int indF = 0; indF < nJ; indF++){
 
-					if(!m_states->FilterAnyTransitionsFromJ(myiLevelI,m_jvals[indF]))
+				if(!m_states->FilterAnyTransitionsFromJ(iLevelI,m_jvals[indF]))
 						continue;
 
-					for(int idegI = 0; idegI < p_ndegI; idegI++){		
-						if(!m_states->DegeneracyFilter(p_igammaI,p_igammaF,idegI,0))
-							continue;	
-						//if(expected_process == rank){
+					for(int idegI = 0; idegI < ndegI; idegI++){		
+						//if(!m_states->DegeneracyFilter(gammaI,p_igammaF,idegI,0))
+						//	continue;	
+						if(expected_process == rank){
 							//Do halflinestrength
-							m_gpu->ExecuteHalfLs(cached_half_linestrength[indF][idegI],indI,indF,idegI,p_igammaI);
-
-						//}
+							m_gpu->ExecuteHalfLs(half_linestrength[indF][idegI],indI,indF,idegI,gammaI);
+						}
 
 					}
 					//MPI_Abort(MPI_COMM_WORLD,0);
-				}
-			}
 		}
+			
 		//If we've already done it then just ignore
-		flag_preprocess=false;
 		for(int indF = 0; indF < nJ; indF++){
 					//Broadcast
-			for(int idegI = 0; idegI < ndegI; idegI++){			
-				memcpy(half_linestrength[indF][idegI],cached_half_linestrength[indF][idegI],sizeof(double)*size_t(DimenMax));
+			for(int idegI = 0; idegI < ndegI; idegI++){	
+				//if(!m_states->DegeneracyFilter(gammaI,p_igammaF,idegI,0))
+				//			continue;			
+				
+				if(expected_process == rank)
+					m_gpu->GetHalfLineStrengthResult(indF,idegI);
 				MPI_Bcast(half_linestrength[indF][idegI], DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
 					//Update our gpu
 				m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
@@ -356,6 +329,7 @@ int main(int argc, char** argv){
 	if(rank==0){
 		Timer::getInstance().PrintTimerInfo();
 	}
+
 
 	MPI_Finalize();
 	
