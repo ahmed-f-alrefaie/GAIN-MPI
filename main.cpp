@@ -203,7 +203,7 @@ int main(int argc, char** argv){
 
 		
 		if(rank==0) {printf("Lower state energy: %12.6f cm-1\n",energyI-ZPE); fflush(0);}
-
+		Timer::getInstance().StartTimer("Intensity Loop");
 		Timer::getInstance().StartTimer("Half linestrength");
 
 
@@ -242,7 +242,7 @@ int main(int argc, char** argv){
 	
 		Timer::getInstance().EndTimer("Half linestrength");
 
-		Timer::getInstance().StartTimer("Intensity Loop");
+		
 		
 		#pragma omp parallel for default(shared) firstprivate(rank,nLevels,nProcs,iLevelI) reduction(+:transitions)
 		for(int iLevelF=rank; iLevelF < nLevels; iLevelF+=nProcs){

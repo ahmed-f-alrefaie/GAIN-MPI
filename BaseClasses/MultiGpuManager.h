@@ -16,12 +16,12 @@ private:
 	Dipole* m_dipole;
 	States* m_states;
 	std::vector<int> m_jvals;
-
+	int device_num;
 	std::vector<int> m_dipole_dist;
 	
 	std::vector<int> proc_distrub;
 	std::vector<int> total_procs;
-
+	int gpu;
 	//Used to get the linestrength result
 	std::vector< std::vector< double* > > half_linestrength;
 	//Used to store the temporary result when it is completed with blocking

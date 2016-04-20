@@ -12,14 +12,14 @@ void MultiGpuManager::UnpinVectorMemory(double* vector,int n){
 
 int MultiGpuManager::GetFreeDevice(){
 	int device_id=-1;
-	static int device_num = 0;
+
 	int devCount;
 	cudaGetDeviceCount(&devCount);
-	for(int i=device_num; i< devCount; i++){
-		cudaSetDevice(i);
+	for(device_num; device_num< devCount; device_num++){
+		cudaSetDevice(device_num );
 		if(cudaFree(0)==cudaSuccess){
 			cudaThreadExit();
-			return i;
+			return device_num++;
 		}	
 	}
 
@@ -41,7 +41,7 @@ MultiGpuManager::MultiGpuManager(std::vector<int> jvals,States* states,int nproc
 
 	total_gpus_assigned = 0;
 	int allowed_gpus = 0;
-
+	device_num = 0;
 	const char* num_gpu = getenv("NUM_GPUS");
 
 	if(num_gpu!= NULL){
