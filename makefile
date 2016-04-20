@@ -21,10 +21,10 @@ endif
 C_FORT_LIB = -lifcore -limf
 
 
-CUDA_LIB = -L$(CUDA_HOME)lib64/ -lcudart -lcuda -lcublas
+CUDA_LIB = -L$(CUDA_HOME)/lib64/ -lcudart -lcuda -lcublas
 LIB     =  $(CUDA_LIB) $(C_FORT_LIB)
 
-CUDA_INC = -I$(CUDA_HOME)include
+CUDA_INC = -I$(CUDA_HOME)/include
 
 
 
