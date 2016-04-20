@@ -3,7 +3,7 @@
 #include "TroveClasses/TroveStates.h"
 #include "TroveClasses/TroveBasisSet.h"
 #include "BaseClasses/EigenVector.h"
-#include "BaseClasses/GpuManager.h"
+#include "BaseClasses/MultiGpuManager.h"
 #include "BaseClasses/Output.h"
 #include "common/Timer.h"
 #include <omp.h>
@@ -102,11 +102,11 @@ int main(int argc, char** argv){
 
 	m_output->Initialize();
 	std::vector<int> m_jvals = m_input->GetJvals();
-	GpuManager* m_gpu;
+	MultiGpuManager* m_gpu;
 	for(int i=0; i < nProcs; i++){
 	//Initialize our gpu
 		if(rank==i){
-			m_gpu = new GpuManager(-1,omp_threads,m_input->DoRotSym());
+			m_gpu = new MultiGpuManager(m_input->GetJvals(),m_states,omp_threads,m_input->DoRotSym());
 			m_gpu->InitializeAndTransferConstants(m_input->GetMaxJ(),m_input->GetNSym(),m_input->GetSymMaxDegen());
 		}
 		MPI_Barrier( MPI_COMM_WORLD);
@@ -137,11 +137,8 @@ int main(int argc, char** argv){
 
 	//Handle dipole
 	m_dipole = new TroveDipole();
-	m_dipole->InitDipole(6000000000l);
 
-	m_gpu->TransferDipole(m_dipole,0);
-
-	m_dipole->RemoveDipole();
+	m_gpu->TransferDipole(m_dipole);
 
 
 
@@ -157,20 +154,17 @@ int main(int argc, char** argv){
 
 	double* vector_I = m_gpu->GetInitialVector();
 	
-
+	
 	std::vector< std::vector<double*> > half_linestrength;
 	for(int i = 0; i < nJ; i++){
 
 		half_linestrength.push_back(std::vector<double*>());
 		for(int idegI = 0; idegI < m_input->GetSymMaxDegen(); idegI++){
 			half_linestrength.back().push_back(NULL);
-			half_linestrength.back().back() = new double[DimenMax];
-			//GpuManager::PinVectorMemory(half_linestrength.back().back(),DimenMax);
-			BaseManager::TrackGlobalMemory(sizeof(double)*BasisSet::GetDimenMax());
 			
 		}
 	}
-
+	
 	eigen = new EigenVector((*m_input));
 
 	eigen->CacheEigenvectors(m_states);
@@ -213,8 +207,8 @@ int main(int argc, char** argv){
 		Timer::getInstance().StartTimer("Half linestrength");
 
 
-
-				
+		m_gpu->ExecuteHalfLs(iLevelI,indI,ndegI,gammaI,gammaFPair);
+		/*	
 		for(int indF = 0; indF < nJ; indF++){
 
 				if(!m_states->FilterAnyTransitionsFromJ(iLevelI,m_jvals[indF]))
@@ -231,7 +225,7 @@ int main(int argc, char** argv){
 					}
 					//MPI_Abort(MPI_COMM_WORLD,0);
 		}
-			
+		*/	
 		//If we've already done it then just ignore
 		for(int indF = 0; indF < nJ; indF++){
 					//Broadcast
@@ -239,11 +233,10 @@ int main(int argc, char** argv){
 				if(!m_states->DegeneracyFilter(gammaI,gammaFPair,idegI,0))
 							continue;			
 				
-				if(expected_process == rank)
-					m_gpu->GetHalfLineStrengthResult(half_linestrength[indF][idegI],indF,idegI);
-				MPI_Bcast(half_linestrength[indF][idegI], DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
+				double* half_linestrength = m_gpu->GetHalfLineStrength(indF,idegI);
+				MPI_Bcast(half_linestrength, DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
 					//Update our gpu
-				m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);
+				m_gpu->UpdateHalfLinestrength(half_linestrength,indF,idegI);
 			}
 		}
 	

@@ -544,7 +544,7 @@ void GpuManager::ExecuteRotSymHalfLs(int indI,int indF,int idegI,int igammaI)
 	if(gpu_Wigner[indI][dJ].rot == NULL){
 		LogErrorAndAbort("Wigner has a problem\n");
 	}
-
+	cudaStreamWaitEvent(half_ls_stream[indF][idegI][0],transfer_dipole_event,0);
 	//Execute
 	compute_gpu_half_linestrength_rotsym_(
 			basisSets[indF].dimensions,
@@ -607,7 +607,7 @@ void GpuManager::ExecuteHalfLs(int indI,int indF,int idegI,int igammaI){
 
 void GpuManager::TransformHalfLsVector(int indI,int indF,int idegI,int igammaI){
 
-	cudaStreamWaitEvent(correlate_half_ls_stream[indF][idegI],transfer_dipole_event,0);
+	
 	//transform to primitive
 	transform_vector_primitive(basisSets[indI].dimensions,igammaI,inflationData[indI].MaxSymCoeffs,idegI,inflationData[indI].sDeg[igammaI],inflationData[indI].Ntotal[igammaI],inflationData[indI].ijTerms, inflationData[indI].contr,inflationData[indI].N[igammaI],inflationData[indI].repres[igammaI], vectorI,prim_half_ls_vectors[indF][idegI],correlate_half_ls_stream[indF][idegI]);
 
@@ -617,9 +617,9 @@ void GpuManager::TransformHalfLsVector(int indI,int indF,int idegI,int igammaI){
 
 
 	//Synchronize the streams until the correlation is complete
-	for(int i = 0; i < MAX_STREAMS; i++){
+	for(int i = 0; i < MAX_STREAMS; i++)
 		 cudaStreamWaitEvent(half_ls_stream[indF][idegI][i],correlated_event[indF][idegI],0);
-	}
+	
 
 }
 
@@ -627,6 +627,9 @@ void GpuManager::TransformHalfLsVector(int indI,int indF,int idegI,int igammaI){
 
 void GpuManager::ExecuteKBlockHalfLs(int indI,int indF,int idegI,int igammaI){
 	cudaSetDevice(gpu_id);
+	for(int i = 0; i < MAX_STREAMS; i++){
+		cudaStreamWaitEvent(half_ls_stream[indF][idegI][i],transfer_dipole_event,0);
+	}
 
 	for(int kF=0; kF < basisSets[indF].J+1; kF++){
 			compute_gpu_half_linestrength_(

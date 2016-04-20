@@ -53,7 +53,7 @@ public:
 	
 	void UpdateHalfLinestrength(double* half_ls,int jInd,int ideg);
 
-	std::vector<std::vector<double*> > * GetHalfLineStrength(int indF,int idegI);
+	double* GetHalfLineStrength(int indF,int idegI);
 	
 	double* GetInitialVector();
 	double* GetFinalVector(int proc_id);
@@ -65,7 +65,7 @@ public:
 	void UpdateEigenVector(int proc_id);
 	
 	//Do work
-	void ExecuteHalfLs(int indI,int indF,int idegI,int igammaI);
+	void ExecuteHalfLs(int iLevelI,int indI,int indF,int idegI,int igammaI);
 	void ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int proc);
 	void WaitForLineStrengthResult(int proc_id);
 

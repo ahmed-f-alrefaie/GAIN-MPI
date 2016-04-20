@@ -68,7 +68,7 @@ void TroveInput::ReadInput(const char* filename){
 	Log("Lower Range %12.6f - %12.6f\n",erange_lower[0],erange_lower[1]);
 	Log("Upper Range %12.6f - %12.6f\n",erange_upper[0],erange_upper[1]);
 	Log("total Memory %12.6f GB",double(memory)/double(GIGABYTE_TO_BYTE));
-	MPI_Abort(MPI_COMM_WORLD,0);
+	//MPI_Abort(MPI_COMM_WORLD,0);
 }
 
 std::string TroveInput::PrepareString(std::string line){

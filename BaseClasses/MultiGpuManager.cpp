@@ -29,7 +29,7 @@ int MultiGpuManager::GetFreeDevice(){
 }
 
 void MultiGpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax_degen){
-	MaxDegen = pmaxdegen;
+	DegenMax = pmax_degen;
 	for(int i = 0; i < m_gpus.size(); i++)
 		m_gpus[i]->InitializeAndTransferConstants(jmax,sym_repres,pmax_degen);	
 
@@ -142,7 +142,7 @@ void MultiGpuManager::AllocateVectors(int nJ,int nsizemax,int dimenmax){
 
 	NsizeMax = nsizemax;
 	DimenMax = dimenmax;
-
+	this->nJ = nJ;
 	cudaMallocHost((void**)&vectorI,sizeof(double)*size_t(nsizemax));
 
 	for(int i = 0; i < nJ; i++){
@@ -172,7 +172,10 @@ void MultiGpuManager::UpdateHalfLinestrength(double* half_ls,int jInd,int ideg)
 
 }
 
-double* MultiGpuManager::GetHalfLineStrength(int indF,int idegI){}
+double* MultiGpuManager::GetHalfLineStrength(int indF,int idegI)
+{
+	return half_linestrength.at(indF).at(idegI);
+}
 	
 double* MultiGpuManager::GetInitialVector(){
 	return vectorI;
@@ -201,6 +204,73 @@ void MultiGpuManager::UpdateEigenVector(int proc_id){
 
 }
 
+void MultiGpuManager::TransferWigner(std::vector<Wigner> p_wigner){
+	for(int i = 0; i < m_gpus.size(); i++)
+		m_gpus[i]->TransferWigner(p_wigner);
+}
+
+void MultiGpuManager::ExecuteHalfLs(int iLevelI,int indI,int ndegI,int igammaI,int igammaF)
+{
+	//transform the vector anyway
+	for(int i = 0; i < m_gpus.size(); i++)
+		for(int indF = 0; indF < nJ; indF++)
+			for(int idegI = 0; idegI < ndegI; idegI++)
+				m_gpus[i]->TransformHalfLsVector(indI,indF,idegI,igammaI);
+
+	//Lets loop through the Dipole blocks
+	for(int i = 0; i < m_dipole->GetNumBlocks(); i++){
+		int selected_gpu = m_dipole_dist[i];
+		//Lets wait for the GPU to finish first
+		m_gpus[selected_gpu]->WaitForDevice();
+		//If it has the right dipole block then we push it to the device
+		if(m_gpus[selected_gpu]->GetCurrentBlock() != i) m_gpus[i]->SwitchDipoleBlock(i);
+		//Otherwise do the calculations
+		for(int indF = 0; indF < nJ; indF++){
+			if(!m_states->FilterAnyTransitionsFromJ(iLevelI,m_jvals[indF]))
+				continue;
+			
+			for(int idegI = 0; idegI < ndegI; idegI++){
+				//Execute the half linestrength
+				m_gpus[selected_gpu]->ExecuteHalfLs(indI,indF, idegI,igammaI);
+			}
+		}
+	}
+	for(int indF = 0; indF < nJ; indF++){
+		//Get the result from zero
+		for(int idegI = 0; idegI < ndegI; idegI++){
+			m_gpus[0]->GetHalfLineStrengthResult(half_linestrength[indF][idegI],indF,idegI);
+		}
+	}
+
+	//Get the half linestrength result and apply it to the real half linestrength, we skip this if only one gpu has the result
+	for(int i = 1; i < total_gpus_assigned; i++){
+		for(int indF = 0; indF < nJ; indF++){
+		//Get the result from zero
+			for(int idegI = 0; idegI < ndegI; idegI++){
+				m_gpus[i]->GetHalfLineStrengthResult(tmp_half_linestrength[indF][idegI],indF,idegI);
+				#pragma omp parallel for
+				for(int n=0; n< DimenMax; n++)
+					half_linestrength[indF][idegI][n]+=tmp_half_linestrength[indF][idegI][n];
+			}
+		}		
+
+	}
+
+
+
+}
+void MultiGpuManager::ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int proc)
+{
+	int gpu_id = proc % total_gpus_assigned;
+	m_gpus[gpu_id]->ExecuteDotProduct(indF,idegI,idegF,igammaF,proc);	
+
+}
+void MultiGpuManager::WaitForLineStrengthResult(int proc_id)
+{
+	int gpu_id = proc_id % total_gpus_assigned;
+	m_gpus[gpu_id]->WaitForLineStrengthResult(proc_id);
+
+}
 
 
 
