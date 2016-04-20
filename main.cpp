@@ -86,7 +86,8 @@ int main(int argc, char** argv){
 	m_input->ReadInput(input_filename);
 
 	nJ = m_input->GetNJ();
-
+	//MPI_Finalize();
+	//return 0;
 	//ReadStates
 	
 	m_states = new TroveStates((*m_input));
@@ -105,7 +106,7 @@ int main(int argc, char** argv){
 	for(int i=0; i < nProcs; i++){
 	//Initialize our gpu
 		if(rank==i){
-			m_gpu = new GpuManager(-1,omp_threads);
+			m_gpu = new GpuManager(-1,omp_threads,m_input->DoRotSym());
 			m_gpu->InitializeAndTransferConstants(m_input->GetMaxJ(),m_input->GetNSym(),m_input->GetSymMaxDegen());
 		}
 		MPI_Barrier( MPI_COMM_WORLD);
@@ -114,7 +115,7 @@ int main(int argc, char** argv){
 	
 
 	for(int i = 0; i < m_input->GetNJ(); i++){
-		m_basisSets.push_back(new TroveBasisSet(m_jvals[i],m_input->GetNSym(),m_input->GetSymmetryDegen()));
+		m_basisSets.push_back(new TroveBasisSet(m_jvals[i],m_input->GetNSym(),m_input->GetSymmetryDegen(),m_input->DoRotSym()));
 		m_basisSets.back()->Initialize();
 		//Transfer to the gpu
 		m_gpu->TransferBasisSet(m_basisSets.back());
@@ -122,6 +123,7 @@ int main(int argc, char** argv){
 		TroveBasisSet* t_b = (TroveBasisSet*)m_basisSets.back();
 		m_gpu->TransferInflation(t_b->GetContr(), t_b->GetIJTerms(),t_b->GetDimensions(),t_b->GetMaxSymCoeffs(),
 			t_b->GetMatSize(),t_b->GetRepres(),t_b->GetRepresN(),t_b->GetNTotal(),m_input->GetSymmetryDegen());
+		m_gpu->TransferWigner(t_b->GetWigner());
 
 		
 	}
@@ -163,7 +165,7 @@ int main(int argc, char** argv){
 		for(int idegI = 0; idegI < m_input->GetSymMaxDegen(); idegI++){
 			half_linestrength.back().push_back(NULL);
 			half_linestrength.back().back() = new double[DimenMax];
-			GpuManager::PinVectorMemory(half_linestrength.back().back(),DimenMax);
+			//GpuManager::PinVectorMemory(half_linestrength.back().back(),DimenMax);
 			BaseManager::TrackGlobalMemory(sizeof(double)*BasisSet::GetDimenMax());
 			
 		}
@@ -201,7 +203,7 @@ int main(int argc, char** argv){
 		int indexI = m_states->GetLevel(iLevelI);
 		int expected_process = eigen->ReadVector(vector_I,iLevelI,nSizeI);
 
-		
+		int gammaFPair = m_input->IgammaPair(gammaI);
 		
 		m_gpu->UpdateEigenVector();
 
@@ -223,7 +225,7 @@ int main(int argc, char** argv){
 						//	continue;	
 						if(expected_process == rank){
 							//Do halflinestrength
-							m_gpu->ExecuteHalfLs(half_linestrength[indF][idegI],indI,indF,idegI,gammaI);
+							m_gpu->ExecuteHalfLs(indI,indF,idegI,gammaI);
 						}
 
 					}
@@ -234,11 +236,11 @@ int main(int argc, char** argv){
 		for(int indF = 0; indF < nJ; indF++){
 					//Broadcast
 			for(int idegI = 0; idegI < ndegI; idegI++){	
-				//if(!m_states->DegeneracyFilter(gammaI,p_igammaF,idegI,0))
-				//			continue;			
+				if(!m_states->DegeneracyFilter(gammaI,gammaFPair,idegI,0))
+							continue;			
 				
 				if(expected_process == rank)
-					m_gpu->GetHalfLineStrengthResult(indF,idegI);
+					m_gpu->GetHalfLineStrengthResult(half_linestrength[indF][idegI],indF,idegI);
 				MPI_Bcast(half_linestrength[indF][idegI], DimenMax, MPI_DOUBLE, expected_process, MPI_COMM_WORLD);
 					//Update our gpu
 				m_gpu->UpdateHalfLinestrength(half_linestrength[indF][idegI],indF,idegI);

@@ -59,7 +59,7 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 	int gammaF = states->GetGamma(iLevelF);
 	int ndegF = states->GetNdeg(iLevelF); 
 	int indexF = states->GetLevel(iLevelF);
-
+	
 	for(int idegF=0; idegF < ndegF; idegF++){
 		for(int idegI=0; idegI < ndegI; idegI++){
 			if(!states->DegeneracyFilter(gammaI,gammaF,idegI,idegF))
@@ -76,12 +76,12 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 	if (reduced && ndegF!=1 && ndegI !=1 ) 
 		ls*=double(ndegI);
 
-	A_einst = Acoef_s_1*double((2*jI)+1)*ls*abs(nu_if)*abs(nu_if)*abs(nu_if);
+	A_einst = Acoef_s_1*double((2*jI)+1)*ls*pow(abs(nu_if),3);
 
 	if(A_einst < threshold)
 		return;
 
-	sprintf(buffer,"%12.6lf %8d %4d %4d <- %8d %4d %4d %16.8E [%s ] ||\n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,lsbuf);
+	sprintf(buffer,"%12.6lf %8d %4d %4d <- %8d %4d %4d %16.9E [%s] ||\n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,lsbuf);
 	fprintf(output,"%s",buffer);
 }
 

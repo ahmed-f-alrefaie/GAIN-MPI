@@ -62,36 +62,15 @@ double three_j(int j1,int j2,int j3,int k1,int k2,int k3)
 };
 
 
-int GpuManager::GetFreeDevice(){
-	int device_id=-1;
-	int devCount;
-	cudaGetDeviceCount(&devCount);
-	for(int i=0; i< devCount; i++){
-		cudaSetDevice(i);
-		if(cudaFree(0)==cudaSuccess){
-			cudaThreadExit();
-			return i;
-		}	
-	}
-
-	return -1;
-
-
-}
 
 
 
-GpuManager::GpuManager(int pgpu_id,int nprocs) : BaseManager(), gpu_id(pgpu_id), Nprocs(nprocs){
+
+GpuManager::GpuManager(int pgpu_id,int nprocs,bool rotsym) : BaseManager(), gpu_id(pgpu_id), Nprocs(nprocs), rotsym_do(rotsym){
 
 
 
-	if(pgpu_id==-1){
-		gpu_id = GetFreeDevice();
-		if(gpu_id==-1){
-			LogErrorAndAbort("Error could not get device!\n");
-			
-		}
-	}
+
 	Log("GPUManager Init with ID: %i and Nprocs: %i\n",gpu_id,Nprocs);
 	//hls_stream_id = 0;
 
@@ -142,13 +121,7 @@ void GpuManager::TransferToHost(void* dst,const void* src,size_t size){
 		}
 }
 
-void GpuManager::PinVectorMemory(double* vector,int n){
-	cudaHostRegister(vector,size_t(n)*sizeof(double),cudaHostRegisterPortable);
-}
 
-void GpuManager::UnpinVectorMemory(double* vector,int n){
-	cudaHostUnregister(vector);
-}
 
 void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax_degen){
 	//set the device
@@ -254,16 +227,21 @@ void GpuManager::TransferBasisSet(BasisSet* basisSet){
 	AllocateGpuMemory((void**)&tmp_bset.KTau,sizeof(int)*size_t(tmp_bset.dimensions));
 	TransferToGpu(tmp_bset.KTau, basisSet->GetKTau(),sizeof(int)*size_t(tmp_bset.dimensions));
 
+	AllocateGpuMemory((void**)&tmp_bset.normal_K,sizeof(int)*size_t(tmp_bset.dimensions));
+	TransferToGpu(tmp_bset.normal_K, basisSet->GetK(),sizeof(int)*size_t(tmp_bset.dimensions));
 	//KBlocks
-	AllocateGpuMemory((void**)&tmp_bset.Kblock_size,sizeof(int)*size_t(tmp_bset.J+1));
-	TransferToGpu(tmp_bset.Kblock_size, basisSet->GetKBlock(),sizeof(int)*size_t(tmp_bset.J+1));	
+	if(basisSet->GetKBlock() != NULL){
+		AllocateGpuMemory((void**)&tmp_bset.Kblock_size,sizeof(int)*size_t(tmp_bset.J+1));
+		TransferToGpu(tmp_bset.Kblock_size, basisSet->GetKBlock(),sizeof(int)*size_t(tmp_bset.J+1));	
+	}
 	//Vibrational index
 	AllocateGpuMemory((void**)&tmp_bset.vib_index,sizeof(int)*size_t(tmp_bset.dimensions));
 	TransferToGpu(tmp_bset.vib_index, basisSet->GetVibIndex(),sizeof(int)*size_t(tmp_bset.dimensions));	
-
+	if(basisSet->GetKBlock() != NULL){
 	//We need the starting K information here
-	tmp_bset.KStart.assign(basisSet->GetKStart(),basisSet->GetKStart()+tmp_bset.J +1);
-	tmp_bset.host_KBlock.assign(basisSet->GetKBlock(),basisSet->GetKBlock()+tmp_bset.J +1);
+		tmp_bset.KStart.assign(basisSet->GetKStart(),basisSet->GetKStart()+tmp_bset.J +1);
+		tmp_bset.host_KBlock.assign(basisSet->GetKBlock(),basisSet->GetKBlock()+tmp_bset.J +1);
+	}
 
 	//Now lets put everything nicely here
 	basisSets.push_back(tmp_bset);
@@ -306,11 +284,14 @@ void GpuManager::AllocateVectors(int nJ,int nsizemax,int dimenmax){
 	for(int i =0; i < nJ; i++){
 		prim_half_ls_vectors.push_back(std::vector<double*>());
 		half_ls_vectors.push_back(std::vector<double*>());
+		if(rotsym_do)unsorted_half_ls_vectors.push_back(std::vector<double*>());
 		for(int deg = 0; deg < MaxDegen; deg++){
 			prim_half_ls_vectors.back().push_back(NULL);
 			half_ls_vectors.back().push_back(NULL);
+			if(rotsym_do)unsorted_half_ls_vectors.back().push_back(NULL);
 			AllocateGpuMemory((void**)&prim_half_ls_vectors.back().back(),sizeof(double)*size_t(DimenMax));
 			AllocateGpuMemory((void**)&half_ls_vectors.back().back(),sizeof(double)*size_t(DimenMax));
+			if(rotsym_do)AllocateGpuMemory((void**)&unsorted_half_ls_vectors.back().back(),sizeof(double)*size_t(DimenMax));
 		}
 	}
 
@@ -320,6 +301,10 @@ void GpuManager::AllocateVectors(int nJ,int nsizemax,int dimenmax){
 	for(int i = 0; i <Nprocs; i++){
 		vectorF.push_back(NULL);
 		AllocateGpuMemory((void**)&vectorF.back(),sizeof(double)*size_t(NsizeMax));
+		if(rotsym_do){
+			unsorted_vectorF.push_back(NULL);
+			AllocateGpuMemory((void**)&unsorted_vectorF.back(),sizeof(double)*size_t(DimenMax));
+		}
 		prim_vectorF.push_back(NULL);
 		AllocateGpuMemory((void**)&prim_vectorF.back(),sizeof(double)*size_t(DimenMax));
 		linestrength.push_back(NULL);
@@ -377,8 +362,9 @@ void GpuManager::AllocateVectors(int nJ,int nsizemax,int dimenmax){
 	}
 
 
-
-
+	//Dipole streams and events
+	cudaEventCreateWithFlags (&transfer_dipole_event,cudaEventDisableTiming);
+	cudaStreamCreate(&transfer_dipole_stream);
 
 
 	Log("Done!!!");
@@ -427,6 +413,78 @@ void GpuManager::TransferInflation(int* icontr_, int* ijterm,int dimen,int maxsy
 
 
 }
+/*
+void GpuManager::TransferWigner(int dimen,int* root,double* peigenvect){
+	cudaSetDevice(gpu_id);
+	if(root==NULL || !rotsym_do)
+		return;
+	
+	old_roots.push_back(NULL);
+	Log("Sending the old roots and eigenvectros to gpu memory\n");
+	AllocateGpuMemory((void**)&old_roots.back(),sizeof(int)*dimen);
+	TransferToGpu(old_roots.back(),root,sizeof(int)*dimen);
+
+	eigenvect.push_back(NULL);
+	AllocateGpuMemory((void**)&eigenvect.back(),sizeof(double)*dimen);
+	TransferToGpu(eigenvect.back(),peigenvect,sizeof(double)*dimen);	
+}
+*/
+
+void GpuManager::TransferWigner(std::vector<Wigner> p_wigner){
+	if(!rotsym_do)
+		return;
+	Log("Transfering wigner");
+	gpu_Wigner.push_back(std::vector<Wigner>());
+	for(int i = 0; i < p_wigner.size(); i++){
+		Wigner tmp_wigner;
+		
+		if(p_wigner[i].rot == NULL){
+			tmp_wigner.rot = NULL;
+			tmp_wigner.nlevelsI = 0;
+			tmp_wigner.nlevelsF = 0;
+			
+		}else{
+			tmp_wigner.nlevelsI = p_wigner[i].nlevelsI;
+			tmp_wigner.nlevelsF = p_wigner[i].nlevelsF;
+
+			AllocateGpuMemory((void**)&tmp_wigner.rot,sizeof(double)*tmp_wigner.nlevelsI*tmp_wigner.nlevelsF*MaxDegen*MaxDegen*3);
+			TransferToGpu(tmp_wigner.rot,p_wigner[i].rot,sizeof(double)*tmp_wigner.nlevelsI*tmp_wigner.nlevelsF*MaxDegen*MaxDegen*3);
+
+
+		}		
+		
+
+
+		gpu_Wigner.back().push_back(tmp_wigner);
+
+
+
+
+
+	}
+
+
+
+}
+
+void GpuManager::SwitchDipoleBlock(int block){
+	cudaSetDevice(gpu_id);
+		for(int indF = 0; indF < completed_half_ls_event.size(); indF++)
+			for(int idegI = 0; idegI < completed_half_ls_event[indF].size(); idegI++)
+				for(int i = 0; i < MAX_STREAMS; i++)
+					cudaStreamWaitEvent(transfer_dipole_stream,completed_half_ls_event[indF][idegI][i],0);
+
+			
+
+	
+	cudaMemcpyAsync(gpu_dipole,dipole_me->GetDipolePiece(block),dipole_me->GetDipoleSizeBytes(block),cudaMemcpyHostToDevice,transfer_dipole_stream);
+	cudaEventRecord(transfer_dipole_event,transfer_dipole_stream);
+
+	dipole_block = block;
+
+}
+
+
 void GpuManager::TransferDipole(Dipole* dipole_,int block){
 	cudaSetDevice(gpu_id);
 
@@ -442,12 +500,6 @@ void GpuManager::TransferDipole(Dipole* dipole_,int block){
 	//Copy dipole information anyway
 	copy_dipole_constant(dipole_me->GetMaxContracts());
 
-
-	if(dipole_me->IsBlocked()){
-		LogErrorAndAbort("Blocking not yet implemented here!\n");
-		
-	}
-
 	//Alloc to the GPU the biggest block size
 	
 	AllocateGpuMemory((void**)&gpu_dipole,dipole_me->GetBiggestBlockSizeBytes());		
@@ -459,6 +511,8 @@ void GpuManager::TransferDipole(Dipole* dipole_,int block){
 	Log("Done\n");
 	
 }
+
+
 
 void GpuManager::UpdateHalfLinestrength(double* half_ls,int jInd,int ideg){
 	cudaSetDevice(gpu_id);
@@ -477,14 +531,89 @@ void GpuManager::UpdateEigenVector(int proc_id){
 	cudaMemcpyAsync(vectorF[proc_id],host_vectorF[proc_id],sizeof(double)*size_t(NsizeMax),cudaMemcpyHostToDevice,dot_product_omp_stream[proc_id]);
 }
 
+void GpuManager::ExecuteRotSymHalfLs(int indI,int indF,int idegI,int igammaI)
+{
 
-void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int igammaI){
 	cudaSetDevice(gpu_id);
 
+	int dJ = basisSets[indF].J - basisSets[indI].J + 1;
+
+	if( dJ > 2)
+		LogErrorAndAbort("Something went wrong in the dJ department\n");
+	
+	if(gpu_Wigner[indI][dJ].rot == NULL){
+		LogErrorAndAbort("Wigner has a problem\n");
+	}
+
+	//Execute
+	compute_gpu_half_linestrength_rotsym_(
+			basisSets[indF].dimensions,
+			basisSets[indI].dimensions,
+
+			gpu_Wigner[indI][dJ].nlevelsI,
+			gpu_Wigner[indI][dJ].nlevelsF,
+
+			MaxDegen,
+			
+			basisSets[indI].normal_K,
+			basisSets[indF].normal_K,
+
+			basisSets[indI].KTau,
+			basisSets[indF].KTau, 
+
+			basisSets[indI].vib_index,
+			basisSets[indF].vib_index,
+			dipole_me->GetDipoleStart(dipole_block),
+			dipole_me->GetDipoleEnd(dipole_block),
+			dipole_me->GetDipoleNcontr(dipole_block),
+			gpu_dipole,
+			
+			gpu_Wigner[indI][dJ].rot,
+			
+			prim_half_ls_vectors[indF][idegI],
+
+			half_ls_vectors[indF][idegI],
+
+			half_ls_stream[indF][idegI][0]);
+	cudaEventRecord(completed_half_ls_event[indF][idegI][0],half_ls_stream[indF][idegI][0]);
+	cudaStreamWaitEvent(transfer_half_ls_stream[indF][idegI],completed_half_ls_event[indF][idegI][0],0);
+
+
+	/*cudaDeviceSynchronize();
+	double* tmp_half_ls=new double[DimenMax];
+	Log("### INDI=%i INDF=%i IGAMMAI=%i#####\n",indI,indF,igammaI); 
+	TransferToHost((void*)tmp_half_ls,(void*)half_ls_vectors[indF][idegI],sizeof(double)*basisSets[indF].dimensions);
+	cudaDeviceSynchronize();
+	for(int i = 0; i < DimenMax; i++)
+		Log(" %14.3E\n",tmp_half_ls[i]);
+	
+	MPI_Abort(MPI_COMM_WORLD,0);
+*/
+}
+
+
+void GpuManager::ExecuteHalfLs(int indI,int indF,int idegI,int igammaI){
+
+	TransformHalfLsVector(indI,indF,idegI,igammaI);
+	if(rotsym_do)
+		ExecuteRotSymHalfLs(indI,indF,idegI,igammaI);
+	else
+		ExecuteKBlockHalfLs(indI,indF,idegI,igammaI);
+	
+
+
+}
+
+
+void GpuManager::TransformHalfLsVector(int indI,int indF,int idegI,int igammaI){
+
+	cudaStreamWaitEvent(correlate_half_ls_stream[indF][idegI],transfer_dipole_event,0);
 	//transform to primitive
 	transform_vector_primitive(basisSets[indI].dimensions,igammaI,inflationData[indI].MaxSymCoeffs,idegI,inflationData[indI].sDeg[igammaI],inflationData[indI].Ntotal[igammaI],inflationData[indI].ijTerms, inflationData[indI].contr,inflationData[indI].N[igammaI],inflationData[indI].repres[igammaI], vectorI,prim_half_ls_vectors[indF][idegI],correlate_half_ls_stream[indF][idegI]);
 
-	cudaEventRecord(correlated_event[indF][indI],correlate_half_ls_stream[indF][idegI]);
+	
+
+	cudaEventRecord(correlated_event[indF][idegI],correlate_half_ls_stream[indF][idegI]);
 
 
 	//Synchronize the streams until the correlation is complete
@@ -492,39 +621,44 @@ void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int i
 		 cudaStreamWaitEvent(half_ls_stream[indF][idegI][i],correlated_event[indF][idegI],0);
 	}
 
+}
+
+
+
+void GpuManager::ExecuteKBlockHalfLs(int indI,int indF,int idegI,int igammaI){
+	cudaSetDevice(gpu_id);
+
 	for(int kF=0; kF < basisSets[indF].J+1; kF++){
-	//Do Half_linestrength
-		compute_gpu_half_linestrength_(
-						basisSets[indF].host_KBlock[kF],
-						basisSets[indI].dimensions,
+			compute_gpu_half_linestrength_(
+							basisSets[indF].host_KBlock[kF],
+							basisSets[indI].dimensions,
 
-						basisSets[indI].J,
-						basisSets[indF].J,
+							basisSets[indI].J,
+							basisSets[indF].J,
 	
-						kF,
+							kF,
 					
-						basisSets[indI].KTau,
-						basisSets[indF].KTau, 
+							basisSets[indI].KTau,
+							basisSets[indF].KTau, 
 
-						basisSets[indI].vib_index,
-						basisSets[indF].vib_index,
+							basisSets[indI].vib_index,
+							basisSets[indF].vib_index,
 
-						basisSets[indF].KStart[kF],
-						basisSets[indI].KStart[std::max(kF-1,0)],
+							basisSets[indF].KStart[kF],
+							basisSets[indI].KStart[std::max(kF-1,0)],
 
-						dipole_me->GetDipoleStart(0),
-						dipole_me->GetDipoleEnd(0),
-						dipole_me->GetDipoleNcontr(0),
-						basisSets[indF].host_KBlock[kF],
-						basisSets[indI].Kblock_size,
+							dipole_me->GetDipoleStart(dipole_block),
+							dipole_me->GetDipoleEnd(dipole_block),
+							dipole_me->GetDipoleNcontr(dipole_block),
+							basisSets[indF].host_KBlock[kF],
+							basisSets[indI].Kblock_size,
 
-						gpu_dipole,
-						prim_half_ls_vectors[indF][idegI],
-						threejsymbols,
-						half_ls_vectors[indF][idegI],
-						half_ls_stream[indF][idegI][GetHStreamId(indF,idegI)]);
-	
-
+							gpu_dipole,
+							prim_half_ls_vectors[indF][idegI],
+							threejsymbols,
+							half_ls_vectors[indF][idegI],
+							half_ls_stream[indF][idegI][GetHStreamId(indF,idegI)]);
+		
 	}
 
 	for(int i = 0; i < MAX_STREAMS; i++){
@@ -536,9 +670,6 @@ void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int i
 	}
 	//Now we can Async to the
 
-
-	cudaMemcpyAsync(half_ls,half_ls_vectors[indF][idegI],sizeof(double)*size_t(basisSets[indF].dimensions),cudaMemcpyDeviceToHost,transfer_half_ls_stream[indF][idegI]);
-
 	/*double* tmp_prim_ls=new double[DimenMax];
 	double* tmp_half_ls=new double[DimenMax];
 	Log("### INDI=%i INDF=%i IGAMMAI=%i#####\n",indI,indF,igammaI); 
@@ -547,15 +678,17 @@ void GpuManager::ExecuteHalfLs(double* half_ls,int indI,int indF,int idegI,int i
 	cudaDeviceSynchronize();
 	for(int i = 0; i < DimenMax; i++)
 		Log("%14.3E -> %14.3E\n",tmp_prim_ls[i],tmp_half_ls[i]);
-	*/
+	*/	
+	//MPI_Abort(MPI_COMM_WORLD,0);
 
 
 }
 void GpuManager::ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int proc){
 	cudaSetDevice(gpu_id);
 	//Transform to primitive
-	transform_vector_primitive(basisSets[indF].dimensions,igammaF,inflationData[indF].MaxSymCoeffs,idegF,inflationData[indF].sDeg[igammaF],inflationData[indF].Ntotal[igammaF],inflationData[indF].ijTerms, inflationData[indF].contr,inflationData[indF].N[igammaF],inflationData[indF].repres[igammaF], vectorF[proc],prim_vectorF[proc],dot_product_omp_stream[proc]);
-	//do dot product
+
+		transform_vector_primitive(basisSets[indF].dimensions,igammaF,inflationData[indF].MaxSymCoeffs,idegF,inflationData[indF].sDeg[igammaF],inflationData[indF].Ntotal[igammaF],inflationData[indF].ijTerms, inflationData[indF].contr,inflationData[indF].N[igammaF],inflationData[indF].repres[igammaF], vectorF[proc],prim_vectorF[proc],dot_product_omp_stream[proc]);
+
 	cublasSetStream(handle[proc],dot_product_omp_stream[proc]);
 
 	cublasDdot (handle[proc], basisSets[indF].dimensions,prim_vectorF[proc], 1, half_ls_vectors[indF][idegI], 1, linestrength[proc] + idegI + idegF*MaxDegen );

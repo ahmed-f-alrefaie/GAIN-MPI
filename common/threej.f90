@@ -3,27 +3,27 @@ module FORT_FUNC
 
 	implicit none
 		public three_j
-  integer, parameter :: sik         = selected_int_kind(4)       ! Small integers
-  integer, parameter :: ik          = selected_int_kind(8)       ! "Normal" integers. This must map on
+  integer, parameter :: silk         = selected_int_kind(4)       ! Small integers
+  integer, parameter :: ilk          = selected_int_kind(8)       ! "Normal" integers. This must map on
                                                                  ! C "int" type, or the DX interface won't
                                                                  ! work correctly.
-  integer, parameter :: hik         = selected_int_kind(16)      ! "Pointer" integers - sufficient to store
+  integer, parameter :: hilk         = selected_int_kind(16)      ! "Pointer" integers - sufficient to store
                                                                  ! memory address
-  integer, parameter :: drk         = selected_real_kind(12,25)  ! "Double" reals and complex (complexi? :-)
-  integer, parameter :: rk          = selected_real_kind(12,25)  ! "Normal" reals and complex (complexi? :-)
-  integer, parameter :: ark         = selected_real_kind(25,32)  ! "Accurate" reals and complex (complexi? :-)
+  integer, parameter :: drlk         = selected_real_kind(12,25)  ! "Double" reals and complex (complexi? :-)
+  integer, parameter :: rlk          = selected_real_kind(12,25)  ! "Normal" reals and complex (complexi? :-)
+  integer, parameter :: arlk         = selected_real_kind(25,32)  ! "Accurate" reals and complex (complexi? :-)
   contains
    function three_j(j1,j2,j3,k1,k2,k3) bind (c, name='c_three_j')
   use,intrinsic :: iso_c_binding
   implicit none
 
-      real(rk) :: three_j
-      integer(ik),intent(in) :: j1,j2,j3,k1,k2,k3
-      real(rk) :: a,b,c,al,be,ga
+      real(rlk) :: three_j
+      integer(ilk),intent(in) :: j1,j2,j3,k1,k2,k3
+      real(rlk) :: a,b,c,al,be,ga
       !
-      integer(ik):: newmin,newmax,new,iphase
-      real(rk)   :: delta,clebsh,minus
-      real(rk)   :: term,term1,term2,term3,summ,dnew,term4,term5,term6,delta_log,term16,termlog
+      integer(ilk):: newmin,newmax,new,iphase
+      real(rlk)   :: delta,clebsh,minus
+      real(rlk)   :: term,term1,term2,term3,summ,dnew,term4,term5,term6,delta_log,term16,termlog
 
       a = j1
       b = j2
@@ -41,13 +41,13 @@ module FORT_FUNC
       if(c.lt.abs(a-b)) return
       if(a.lt.0.or.b.lt.0.or.c.lt.0) return
       if(a.lt.abs(al).or.b.lt.abs(be).or.c.lt.abs(ga)) return
-      if(-1.0_rk*ga.ne.al+be) return
+      if(-1.0_rlk*ga.ne.al+be) return
 !
 !
 !     compute delta(abc)
 !
-!     delta=sqrt(fakt(a+b-c)*fakt(a+c-b)*fakt(b+c-a)/fakt(a+b+c+1.0_rk))
-      delta_log = faclogf(a+b-c)+faclogf(a+c-b)+faclogf(b+c-a)-faclogf(a+b+c+1.0_rk)
+!     delta=sqrt(fakt(a+b-c)*fakt(a+c-b)*fakt(b+c-a)/fakt(a+b+c+1.0_rlk))
+      delta_log = faclogf(a+b-c)+faclogf(a+c-b)+faclogf(b+c-a)-faclogf(a+b+c+1.0_rlk)
       !
       delta=sqrt(exp(delta_log)) 
 !
@@ -56,16 +56,16 @@ module FORT_FUNC
       !term2=fakt(b-be)*fakt(b+be)
       !term3=fakt(c+ga)*fakt(c-ga)
       !
-      !term=sqrt( (2.0_rk*c+1.0_rk)*term1*term2*term3 )
+      !term=sqrt( (2.0_rlk*c+1.0_rlk)*term1*term2*term3 )
       !
       !
       term1=faclogf(a+al)+faclogf(a-al)
       term2=faclogf(b-be)+faclogf(b+be)
       term3=faclogf(c+ga)+faclogf(c-ga)
       !
-      termlog = ( term1+term2+term3+delta_log )*0.5_rk
+      termlog = ( term1+term2+term3+delta_log )*0.5_rlk
  
-      term=sqrt( (2.0_rk*c+1.0_rk) )
+      term=sqrt( (2.0_rlk*c+1.0_rlk) )
 !
 !
 !     now compute summation term
@@ -75,7 +75,7 @@ module FORT_FUNC
 !     .  now find what the range of new is.
 !
 !
-      newmin=idnint(max((a+be-c),(b-c-al),0.0_rk))
+      newmin=idnint(max((a+be-c),(b-c-al),0.0_rlk))
       newmax=idnint(min((a-al),(b+be),(a+b-c)))
 !
 !
@@ -84,7 +84,7 @@ module FORT_FUNC
 !
       do new=newmin,newmax
         !
-        dnew=real(new,rk)
+        dnew=real(new,rlk)
         !
         term4=faclogf(a-al-dnew)+faclogf(c-b+al+dnew)
         term5=faclogf(b+be-dnew)+faclogf(c-a-be+dnew)
@@ -92,22 +92,22 @@ module FORT_FUNC
         !
         term16=termlog-(term4+term5+term6)
         !
-        summ=summ+(-1.0_rk)**new*exp(term16)
+        summ=summ+(-1.0_rlk)**new*exp(term16)
         !
       enddo
 !
 !     so clebsch-gordon <j1j2m1m2ljm> is clebsh
 !
-      clebsh=term*summ ! /sqrt(10.0_rk)
+      clebsh=term*summ ! /sqrt(10.0_rlk)
 !
 !     convert clebsch-gordon to three_j
 !
       iphase=idnint(a-b-ga)
-      minus = -1.0_rk
-      if (mod(iphase,2).eq.0) minus = 1.0_rk
+      minus = -1.0_rlk
+      if (mod(iphase,2).eq.0) minus = 1.0_rlk
       three_j=minus*clebsh/term
 
-!     threej=(-1.d0)**(iphase)*clebsh/sqrt(2.0_rk*c+1.d0)
+!     threej=(-1.d0)**(iphase)*clebsh/sqrt(2.0_rlk*c+1.d0)
 !
 !
    end function three_j
@@ -116,14 +116,14 @@ module FORT_FUNC
 
    function fakt(a) result (f)
 
-      real(rk),intent(in) :: a
-      real(rk)            :: ax,f
-      integer(ik)         :: i,ic
+      real(rlk),intent(in) :: a
+      real(rlk)            :: ax,f
+      integer(ilk)         :: i,ic
 !
 
 !
       ax=a
-      f=1.0_rk
+      f=1.0_rlk
       if(abs(ax)<1.d-24) return
       f=.1d0
       if(ax.lt.0.d0) then 
@@ -132,24 +132,24 @@ module FORT_FUNC
       endif 
       !
       ic=idnint(ax)
-      ax=ax/10.0_rk
+      ax=ax/10.0_rlk
       f=ax
       do  i=1,ic-1
-        f=f*(ax-real(i,rk)*0.1_rk)
+        f=f*(ax-real(i,rlk)*0.1_rlk)
       enddo
 
     end function fakt
 
   function faclogf(a)   result (v)
-    real(rk),intent(in) ::  a
-    real(ark)              :: v 
-    integer(ik) j,k
+    real(rlk),intent(in) ::  a
+    real(arlk)              :: v 
+    integer(ilk) j,k
 
     v=0
     k=nint(a)
     if(k>=2) then 
       do j=2,k
-         v=v+log(real(j,ark))
+         v=v+log(real(j,arlk))
       enddo 
     endif 
     

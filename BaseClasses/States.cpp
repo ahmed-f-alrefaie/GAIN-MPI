@@ -32,6 +32,7 @@ States::States(Input & input): BaseProcess(){
 	isym_pairs = input.GetISymPairs();
 	igamma_pair = input.GetIGammaPair();
 	reduced = input.IsReduced();
+	symmetry_type = input.GetSymmetryType();
 	nsize_max = 0;
 
 }
@@ -95,11 +96,22 @@ bool States::DegeneracyFilter(int gammaI,int gammaF,int idegI,int idegF){
 		return true;
 	if(!reduced)
 		return true;
-	
-	if(idegI==1 && idegF==0)
+	if(symmetry_type==1)
 		return true;
-	else
-		return false;
+	if(symmetry_type == 2){
+		if(idegI==1 && idegF==0)
+			return true;
+		else
+			return false;
+	}else if(symmetry_type==3){
+		if(gammaI==3 && gammaF==4 && idegI==1 && idegF==0)
+			return true;
+		if(gammaI==4 && gammaF==3 && idegI==2 && idegF==0)
+			return true;
+		if(gammaI==2 && gammaF==2 && idegI==1 && idegF==0) 
+			return true;
+	}
+	return false;
 }
 
 

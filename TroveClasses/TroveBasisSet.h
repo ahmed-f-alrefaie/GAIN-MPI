@@ -7,7 +7,7 @@
 #include <fstream>
 #include "../common/Util.h"
 #include "../BaseClasses/BasisSet.h"
-
+#include "../common/Wigner.h"
 
 //#define DEBUG
 
@@ -32,6 +32,25 @@ struct TO_PTrepresT
 	int* N;
 };
 
+class K_tau_vib{
+public:
+	int K;
+	int tau;
+	int vib;
+	int iroot;
+	int dimen;
+	double eigenvec;
+	static bool sortK(const K_tau_vib & lhs, const K_tau_vib & rhs)
+   	{
+  		return lhs.K < rhs.K || ((lhs.K==rhs.K) && lhs.iroot< rhs.iroot);
+    	};
+	static bool sortRoot(const K_tau_vib & lhs, const K_tau_vib & rhs)
+   	{
+  		return lhs.iroot < rhs.iroot;
+    	};
+};
+
+
 
 
 class TroveBasisSet : public BasisSet
@@ -54,24 +73,31 @@ private:
     TO_PTrotquantaT* rot_index;
     int*	icontr_correlat_j0;
     int* 	nsize;
+    int*        original_root;
     int nsize_max;
     TO_PTrepresT* irr;
     int* Ntotal;
     int mat_size;
     int* ijterms;
+    bool do_rotsym;
     //Required for correlation
     static TroveBasisSet* j0BasisSet;
 
     std::vector<int> sym_degen;
     int sym_nrepres;
+    double* eigenvects;
+    int* dimenRoot;
     
-    
+    std::vector<Wigner> wigner;
+
+
+    int* old_roots;
     //for later when i might change the basis set
     virtual void Correlate();
     void ComputeijTerms();
     void ReadBasisSet();
 public:
-   TroveBasisSet(int J,int sym_n, std::vector<int> psym_degen);
+   TroveBasisSet(int J,int sym_n, std::vector<int> psym_degen,bool rotsym=false);
 
    void Initialize();
    
@@ -106,6 +132,12 @@ public:
 
 	return RepresTmp;
 	};
+
+  int* GetOldRoots(){if(do_rotsym)return old_roots;else return NULL;};
+  double* GetRotEigenvects(){if(do_rotsym)return eigenvects;else return NULL;};
+
+  std::vector<Wigner> GetWigner(){return wigner;};
+
 };
 
 

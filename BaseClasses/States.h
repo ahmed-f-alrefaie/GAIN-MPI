@@ -49,6 +49,7 @@ protected:
 	int nsize_max;
 	double ZPE;
 	bool reduced;
+	int symmetry_type;
 	bool filter_state(double energy,int igamma);
 	bool filter_lower(double energy,int igamma);
 	bool filter_upper(double energy,int igamma);

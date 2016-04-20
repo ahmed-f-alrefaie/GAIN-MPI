@@ -39,3 +39,4 @@ double GenRandNumber(double LO, double HI);
 int64 GetTimeMs64();
 void CreateZeroVector(double** vector,size_t count);
 void wrapvalue(unsigned long int & var, unsigned long int min,unsigned long int max);
+unsigned long long getTotalSystemMemory();

@@ -1,5 +1,8 @@
 
 #include "TroveInput.h"
+#include <cstring>
+extern "C" void c_SymInit(char input[80]);
+
 
 void TroveInput::ReadInput(const char* filename){
 
@@ -25,6 +28,11 @@ void TroveInput::ReadInput(const char* filename){
 		
 		if(input_flag == "MEM"){
 			memory = atoi(split_line[1].c_str());
+			if (memory==-1){
+				memory = size_t(((double)getTotalSystemMemory())*0.95);
+				continue;
+			}
+			
 			if(split_line.size()==3){
 				if(trim(split_line[2])=="GB")
 					memory*=GIGABYTE_TO_BYTE;
@@ -38,6 +46,10 @@ void TroveInput::ReadInput(const char* filename){
 			symmetry_group = trim(split_line[1]);
 		}else if(input_flag == "INTENSITY"){
 			ReadIntensity();
+		}else if(input_flag == "ROTSYM"){
+			if(trim(split_line[1])=="EULER"){
+				rotsym_do = true;
+			}
 		}
 		
 		
@@ -56,7 +68,7 @@ void TroveInput::ReadInput(const char* filename){
 	Log("Lower Range %12.6f - %12.6f\n",erange_lower[0],erange_lower[1]);
 	Log("Upper Range %12.6f - %12.6f\n",erange_upper[0],erange_upper[1]);
 	Log("total Memory %12.6f GB",double(memory)/double(GIGABYTE_TO_BYTE));
-
+	MPI_Abort(MPI_COMM_WORLD,0);
 }
 
 std::string TroveInput::PrepareString(std::string line){
@@ -75,6 +87,8 @@ void TroveInput::HandleSymmetery(){
 	sym_maxdegen = 1;
 	Log("SYMMETRY-STUFF");
 	std::cout<<symmetry_group<<std::endl;
+	symmetry_type = 1;
+	char sym_group[80];
 	if(symmetry_group=="C2V"){
 		
 		sym_degen.push_back(1);
@@ -87,7 +101,7 @@ void TroveInput::HandleSymmetery(){
 
 	}else if(symmetry_group=="C3V"){
 		sym_degen.push_back(1);
-
+		symmetry_type=2;
 		sym_degen.push_back(1);
 		
 		sym_degen.push_back(2);
@@ -122,7 +136,22 @@ void TroveInput::HandleSymmetery(){
 		sym_degen.push_back(1);
 		sym_degen.push_back(1);
 		sym_degen.push_back(2);
+		symmetry_type=2;
+	}else if(symmetry_group=="TD"){
+		sym_degen.push_back(1);
+		sym_degen.push_back(1);
+		sym_degen.push_back(2);
+		sym_degen.push_back(3);
+		sym_degen.push_back(3);
+		symmetry_type = 3;
+
+		
 	}
+	strcpy(sym_group,symmetry_group.c_str());
+
+	if(rotsym_do){
+		c_SymInit(sym_group);
+	}	
 	
 
 	sym_nrepres = sym_degen.size();

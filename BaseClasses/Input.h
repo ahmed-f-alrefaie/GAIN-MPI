@@ -9,6 +9,10 @@
 #include <cstring>
 
 #pragma once
+
+
+
+
 class Input : public BaseProcess {
 protected:
 	double ZPE;
@@ -43,13 +47,15 @@ protected:
 	int sym_maxdegen;
 	std::vector<std::string> c_sym;
 
+	bool rotsym_do;
+
 	bool symmetry_reduced;
-	int symmetry_id;
+	int symmetry_type;
 	//Size
 	size_t memory;
 
 public:
-	Input() : BaseProcess(), symmetry_reduced(false) {};
+	Input() : BaseProcess(), symmetry_reduced(false), rotsym_do(false) {};
 	virtual void ReadInput(const char* filename)=0;
 	
 	//Getters
@@ -80,7 +86,9 @@ public:
 	bool DoSym(int gamma){return isym_do.at(gamma);}
 	bool IsReduced(){return symmetry_reduced;};
 	int IgammaPair(int gamma){return igamma_pair.at(gamma);};
+	int GetSymmetryType(){return symmetry_type;};
 	double GetThreshold(){return thresh_linestrength;}
+	bool DoRotSym(){return rotsym_do;};
 	
 
 };

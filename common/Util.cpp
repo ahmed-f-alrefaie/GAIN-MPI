@@ -16,6 +16,13 @@
 #include <cmath>
 #include <ctime>
 
+#ifdef __linux
+#include <unistd.h>
+#elif _WIN32
+#include <windows.h>
+#endif
+
+
 
 
 bool fexists(const char *filename)
@@ -160,4 +167,23 @@ int64 GetTimeMs64()
  return ret;
 
 };
+
+
+unsigned long long getTotalSystemMemory()
+{
+	printf("Get memory\n");
+#ifdef __linux 
+    printf("With linux!!\n");
+    long pages = sysconf(_SC_PHYS_PAGES);
+    long page_size = sysconf(_SC_PAGE_SIZE);
+    return pages * page_size;
+#elif _WIN32
+    MEMORYSTATUSEX status;
+    status.dwLength = sizeof(status);
+    GlobalMemoryStatusEx(&status);
+    return status.ullTotalPhys;
+#endif
+}
+
+
 

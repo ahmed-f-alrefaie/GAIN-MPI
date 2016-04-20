@@ -1,7 +1,9 @@
 #include "TroveBasisSet.h"
+#include <algorithm>
 
-
-
+extern "C" void c_GetNirreps(int* J, int* Ntot,double * eigenvects);
+extern "C" void c_wignerGen(int *jI,int * jF,double * rot_ptr,int * nLevelsI,int * nlevelsF);
+extern "C" void c_GetNelevels(int *jI,int * jF,int * nLevelsI,int * nlevelsF);
 TroveBasisSet* TroveBasisSet::j0BasisSet = NULL;
 
 
@@ -9,7 +11,7 @@ TroveBasisSet* TroveBasisSet::j0BasisSet = NULL;
 
 
 
-TroveBasisSet::TroveBasisSet(int J,int sym_n, std::vector<int> psym_degen) : BasisSet(J){ 
+TroveBasisSet::TroveBasisSet(int J,int sym_n, std::vector<int> psym_degen,bool rotsym) : BasisSet(J), do_rotsym(rotsym){ 
 	sym_nrepres = sym_n;
 	sym_degen=psym_degen;
 
@@ -406,15 +408,24 @@ void TroveBasisSet::Correlate(){
 //       allocate(bset_contr(jind)%k(bset_contr(jind)%Maxcontracts), stat = info)
 //       call ArrayStart('bset_contr',info,size(bset_contr(jind)%k),kind(bset_contr(jind)%k))
 	// Log("Allocate iroot j0\n");
+
+
+	delete[] cnu_j;
+	delete[] cnu_i;
 	iroot_correlat_j0 = new int[Maxcontracts];
 	// Log("Allocate ktau\n");	
 	ktau = new int[Maxcontracts];
 	//tau = new int[Maxcontracts];
 	// Log("Allocate k\n");
 	k = new int[Maxcontracts];
-  	k_block_size= new int[jval+1];
-   	kstart= new int[jval+1];
-	kstart[0]=0;
+	k_block_size=NULL;
+	kstart = NULL;
+	//This is to support the rotsym part which is a little convoluted
+	if(!do_rotsym){
+	  	k_block_size= new int[jval+1];
+	   	kstart= new int[jval+1];
+		kstart[0]=0;
+	}
 	
 /*	       do iroot = 1, bset_contr(jind)%Maxcontracts
           !
@@ -460,17 +471,15 @@ void TroveBasisSet::Correlate(){
 		//if(jval==23&&iroot > 14346) Log("k = %i\n",k);
           	t_tau    = rot_index[ilevel+ideg*ncases].tau;
 		//if(jval==23&&iroot > 14346) Log("tau=%i\n",tau);
-		ktau[iroot] = 2*t_k+t_tau & 1;
+		ktau[iroot] = 2*t_k+t_tau;
 		//tau[iroot] = ktau[iroot] & 1;
           	k[iroot]    = t_k;
-		if(last_k_b != t_k){
-			k_block_size[last_k_b]=ksize;
-			kstart[t_k]=kstart[last_k_b]+ksize;
-			ksize=0;
-			last_k_b=t_k;
-		}
+		
+		if(do_rotsym){
 
-		ksize++;
+			ktau[iroot] = ilevel;
+			k[iroot] = ideg;
+		}
 		if(iroot_correlat_j0[iroot] >= j0BasisSet->Maxcontracts){
 			 LogErrorAndAbort("Error in root correlats %i %i \n",iroot_correlat_j0[iroot],j0BasisSet->Maxcontracts);
 			
@@ -482,16 +491,191 @@ void TroveBasisSet::Correlate(){
 		// Log("iroot = %i j0root = %i\n",iroot,jcontr);
           	
          }
-	k_block_size[last_k_b] = ksize;
-	Log("---------K block analysis for J=%d------------\n",jval);
-	for(int i =0; i < jval+1; i++){
-		Log("K block %d start: %d end %d size: %d \n",i,kstart[i],kstart[i]+k_block_size[i]-1,k_block_size[i]);
-	}
-	
+	//If rotsym;
+	//Since rotsym euler does not give us sorted K, we need to create it
+	if(do_rotsym){
+		//
+		Log("Handling rotsym basis set generation...............\n");
 
+		/*
+
+		int dimenI = 2*jval+1;
+		int nrootI = dimenI;
+
+		int* rot_k = new int[dimenI];
+		int* rot_tau = new int[dimenI];
+		int* ndegI = new int[dimenI];
+
+		rot_k[0]=0;
+		rot_tau[0] = jval & 1;
+
+		int irootI = 0;
+		int icountI = 0;
+		int nlevelsI=0;
+		double* tmp_eigenvects = new double[dimenI*dimenI];
+		int* Nirreps = new int[sym_nrepres];
+
+		c_GetNirreps(&jval,Nirreps,tmp_eigenvects);
+
+		for(int i =0; i < sym_nrepres; i++){
+			Log("%i N[%i] = %i %i\n",jval,i,Nirreps[i],sym_degen[i]);
+		}
+
+		//MPI_Abort(MPI_COMM_WORLD,0);
+		old_roots = new int[Maxcontracts];
+		K_tau_vib* tmp_bset = new K_tau_vib[Maxcontracts];
+		
+		old_roots = new int[Maxcontracts];
+		irootI=1;
+
+		for(int k0=1; k0 <=jval; k0++){
+			for(int tau0=0; tau0<=1; tau0++){
+				rot_k[irootI]=k0;
+				rot_tau[irootI]=tau0;
+				Log("iroot = %i k=%i tau = %i\n",irootI,k0,tau0);
+				
+				irootI++;
+			}
+			
+		}
+		for(int sym = 0; sym < sym_nrepres; sym++){
+			for(int nt = 0; nt < Nirreps[sym]; nt++){
+				ndegI[icountI] = sym_degen[sym];
+				icountI++;
+			}
+		}
+		nlevelsI=icountI;
+		//Log("Nlevels = %i\n",nlevelsI);
+		icountI=0;
+		irootI=0;		
+		int* count_indexI = new int[dimenI*dimenI];
+		for(int sym = 0; sym < sym_nrepres; sym++){
+			for(int nt = 0; nt < Nirreps[sym]; nt++){
+				for(int ideg=0; ideg< sym_degen[sym]; ideg++){
+					count_indexI[icountI + dimenI*ideg] = irootI;
+					Log("count_indexI[%i,%i] = %i\n",icountI,ideg,irootI);
+					Log("eigenvects[%i,%i] = %14.3e\n",icountI,ideg,tmp_eigenvects[icountI + dimenI*ideg]);
+					irootI++;
+				}
+				icountI++;
+			}
+		}
+		eigenvects = new double[Maxcontracts];
+		//Log("Total=%i vs %i\n",icountI+irootI,dimenI*dimenI);
+		for(int iroot = 0; iroot < Maxcontracts; iroot++){
+			int irDeg = k[iroot];
+			int irLevel = ktau[iroot];
+			int whichK =  rot_k[count_indexI[irLevel + irDeg*dimenI]];
+			int whichTau = rot_tau[count_indexI[irLevel + irDeg*dimenI]];
+			tmp_bset[iroot].K = whichK;
+			tmp_bset[iroot].tau = whichTau;
+			tmp_bset[iroot].vib = iroot_correlat_j0[iroot];
+			tmp_bset[iroot].iroot = iroot;
+			tmp_bset[iroot].eigenvec = tmp_eigenvects[irLevel + irDeg*dimenI];
+			
+			//if(jval>0)			
+				//Log("iroot =%d K = %d tau = %d vib = %d count_index=%i Originaliroot = %d\n",iroot,k[iroot],ktau[iroot],iroot_correlat_j0[iroot],count_indexI[irLevel + irDeg*dimenI],iroot);
+		
+
+		}
+
+
+
+		std::sort(tmp_bset,tmp_bset + Maxcontracts,K_tau_vib::sortK);
+		//Sort by K
+		//Place back into the basis set
+		for(int iroot = 0; iroot < Maxcontracts; iroot++){
+			k[iroot] = tmp_bset[iroot].K;
+			ktau[iroot] = tmp_bset[iroot].tau;
+			iroot_correlat_j0[iroot] = tmp_bset[iroot].vib;
+			old_roots[iroot] = tmp_bset[iroot].iroot;
+			eigenvects[iroot] = tmp_bset[iroot].eigenvec;
+			//if(jval>0)			
+				//Log("iroot =%d K = %d tau = %d vib = %d eigenvec=%14.3e Originaliroot = %d\n",iroot,k[iroot],ktau[iroot],iroot_correlat_j0[iroot],eigenvects[iroot],tmp_bset[iroot].iroot);
+		}
+		//
+		Log("Done\n");
+		
+		//MPI_Abort(MPI_COMM_WORLD,0);
+
+		delete []tmp_bset;
+		delete []rot_k;
+		delete []rot_tau;
+		delete[] tmp_eigenvects;
+		//delete[] ndegI;
+		delete[] Nirreps;
+		delete []count_indexI;
+		*/
+
+		wigner.push_back({0,0,0});
+		wigner.push_back({0,0,0});
+		wigner.push_back({0,0,0});
+		int sym_maxdegen=0;
+		for(int i = 0; i < sym_nrepres; i++){
+			sym_maxdegen=std::max(sym_maxdegen,sym_degen[i]);
+		}
+		
+		for(int jF=jval-1; jF<=jval+1; jF++){
+			int dJ = jF-jval + 1;
+			if(jF < 0){
+				continue;
+			}else{
+				//Log("TROVE\n");
+				c_GetNelevels(&jval,&jF,&wigner[dJ].nlevelsI,&wigner[dJ].nlevelsF);
+				//Log("nLevelsI = %i, nlevelsF = %i\n",wigner[dJ].nlevelsI,wigner[dJ].nlevelsF);
+				
+				wigner[dJ].rot = new double[3*(wigner[dJ].nlevelsI)*(wigner[dJ].nlevelsF)*sym_maxdegen*sym_maxdegen];
+				c_wignerGen(&jval,&jF,wigner[dJ].rot,&wigner[dJ].nlevelsI,&wigner[dJ].nlevelsF);
+				//Log("GAIN\n");
+				/*for(int n = 0; n < 3; n++)
+					for(int ilevelI = 0; ilevelI < wigner.back().nlevelsI; ilevelI++)
+						for(int idegI = 0; idegI < sym_maxdegen; idegI++)
+							for(int ilevelF = 0; ilevelF < wigner.back().nlevelsF; ilevelF++)	
+								for(int idegF = 0; idegF < sym_maxdegen; idegF++){
+									Log("wigner(%i,%i).rot(%i,%i,%i,%i,%i) = %14.3E\n",jval,j,n+1,ilevelI+1,ilevelF+1,idegI+1,idegF+1,
+									wigner.back().rot[n + ilevelI*3 + ilevelF*wigner.back().nlevelsI*3 + idegI*wigner.back().nlevelsF*wigner.back().nlevelsI*3
+									+ idegF*sym_maxdegen*wigner.back().nlevelsF*wigner.back().nlevelsI*3]);
+								}*/
+				}
+				
+
+			}
+
+
+		
+		
+
+			
+		
+		
+
+	}
+	//Exploit the k-blocks
+	if(!do_rotsym){
+
+		for(int iroot = 0; iroot < Maxcontracts; iroot++){
+			t_k = 	k[iroot];
+			ktau[iroot] = ktau[iroot] & 1;
+			if(last_k_b != t_k){
+				k_block_size[last_k_b]=ksize;
+				kstart[t_k]=kstart[last_k_b]+ksize;
+				ksize=0;
+				last_k_b=t_k;
+			}
+
+			ksize++;
+
+		}
+
+		k_block_size[last_k_b] = ksize;
+		Log("---------K block analysis for J=%d------------\n",jval);
+		for(int i =0; i < jval+1; i++){
+			Log("K block %d start: %d end %d size: %d \n",i,kstart[i],kstart[i]+k_block_size[i]-1,k_block_size[i]);
+		}
+	
+	}
 	// Log("Cleaning up\n");
-	delete[] cnu_j;
-	delete[] cnu_i;
+
 	 Log("done\n");	
 
 
