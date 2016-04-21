@@ -2,8 +2,8 @@ goal:   GAIN-MPI.x
 
 #
 MPICC = mpiicc
-CCFLAGS =   -O3 -openmp -traceback -xHost
-#CCFLAGS = -g -O0 -openmp
+#CCFLAGS =   -O3 -openmp -traceback -xHost
+CCFLAGS = -g -O0 -openmp
 FORT = ifort
 FFLAGS = -O3 -openmp -traceback -xHost
 
