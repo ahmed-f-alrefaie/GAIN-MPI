@@ -2,7 +2,8 @@
 #include "TroveInput.h"
 #include <cstring>
 extern "C" void c_SymInit(char input[80]);
-
+extern "C" void c_SymGetNrepres(int * N);
+extern "C" void c_GetSymDegen(int * degen,int * symN);
 
 void TroveInput::ReadInput(const char* filename){
 
@@ -89,6 +90,24 @@ void TroveInput::HandleSymmetery(){
 	std::cout<<symmetry_group<<std::endl;
 	symmetry_type = 1;
 	char sym_group[80];
+
+	strcpy(sym_group,symmetry_group.c_str());
+	c_SymInit(sym_group);
+	c_SymGetNrepres(&sym_nrepres);
+	Log("Symmetry %s has %d irreducible representations with degeneracy:\n",sym_group,sym_nrepres);
+	for(int i=0; i < sym_nrepres; i++){
+		int degen;
+		c_GetSymDegen(&degen,&i);
+		Log("%d -> %d \n",i+1,degen);
+		sym_degen.push_back(degen);
+	}
+	if(symmetry_group=="C3V" || symmetry_group=="D3H")
+		symmetry_type=2;
+	else if(symmetry_group=="TD")
+		symmetry_type=3;
+
+
+	/*
 	if(symmetry_group=="C2V"){
 		
 		sym_degen.push_back(1);
@@ -153,7 +172,7 @@ void TroveInput::HandleSymmetery(){
 		c_SymInit(sym_group);
 	}	
 	
-
+	*/
 	sym_nrepres = sym_degen.size();
 	for(int i = 0; i < sym_nrepres; i++)
 		sym_maxdegen = std::max(sym_maxdegen,sym_degen[i]);

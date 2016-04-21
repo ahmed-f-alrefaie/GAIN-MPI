@@ -34,7 +34,7 @@ CUDA_INC = -I$(CUDA_HOME)/include
 OBJ = BaseProcess.o Util.o Timer.o BaseManager.o TroveDipole.o \
       TroveBasisSet.o TroveInput.o TroveStates.o MultiGpuManager.o \
       EigenVector.o Output.o BasisSet.o Dipole.o GpuManager.o States.o \
-      symmetry.o threej.o dipole_GPU.o
+      dipole_GPU.o accuracy.o fort_func.o symmetry.o trove_wrappers.o
 
 
 
@@ -89,11 +89,16 @@ GpuManager.o: ./BaseClasses/GpuManager.cpp
 States.o: ./BaseClasses/States.cpp
 	$(MPICC) -c ./BaseClasses/States.cpp	$(CCFLAGS)
 #FORTRAN
-symmetry.o: ./common/symmetry.f90 threej.o
-	$(FORT) -c ./common/symmetry.f90 $(FFLAGS)
+accuracy.o: ./TroveFortran/accuracy.f90
+	$(FORT) -c ./TroveFortran/accuracy.f90 $(FFLAGS)
+fort_func.o: ./TroveFortran/fort_func.f90 accuracy.o
+	$(FORT) -c ./TroveFortran/fort_func.f90 $(FFLAGS)
 
-threej.o: ./common/threej.f90
-	$(FORT) -c ./common/threej.f90 $(FFLAGS)
+symmetry.o: ./TroveFortran/symmetry.f90 fort_func.o accuracy.o
+	$(FORT) -c ./TroveFortran/symmetry.f90 $(FFLAGS)
+
+trove_wrappers.o: ./TroveFortran/trove_wrappers.f90 symmetry.o fort_func.o accuracy.o
+	$(FORT) -c ./TroveFortran/trove_wrappers.f90 $(FFLAGS)
 #CUDA
 dipole_GPU.o: ./GPU/dipole_GPU.cu
 	$(NVCC) -c ./GPU/dipole_GPU.cu $(NVCCFLAGS) $(CUDA_INC)

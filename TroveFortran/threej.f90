@@ -154,4 +154,114 @@ module FORT_FUNC
     endif 
     
   end function faclogf
+
+  function faclog(k)   result (v)
+    integer(ik),intent(in) ::  k
+    real(ark)              :: v 
+    integer(ik) j
+
+    v=0
+    if(k>=2) then 
+      do j=2,k
+         v=v+log(real(j,ark))
+      enddo 
+    endif 
+    
+  end function faclog
+
+
+   function dlmn(j,n,m,t,error) result (d)
+     integer(ik),intent(in) :: j,n,m
+     integer(ik),intent(out) :: error
+     real(ark),intent(in)   :: t
+     real(ark)              :: ss,prefactor,d,f,g,g1,g2,x,sinx,cosx,gh,h,hs,cos_sin,hlog
+     integer(ik)            :: s
+     
+         error = 0
+         s  =0
+         ss =0
+         !
+         x = 0.5_ark*t ; cosx = cos(x) ; sinx = sin(x)
+         !
+         g2 = 0.5_ark*(faclog(j-m)+faclog(j+m)+faclog(j-n)+faclog(j+n))
+         !
+         do s = 0,min(j-m,j-n)
+            !
+            if (j-m-s>=0.and.j-n-s>=0.and.m+n+s>=0) then
+              !
+              !f=1/((j-m-s)!*(j-n-s)!*s!*(m+n+s)!);
+              !
+              g1 = faclog(j-m-s)+faclog(j-n-s)+faclog(s)+faclog(m+n+s)
+              !
+              g = g2-g1
+              !
+              cos_sin = cosx**(2*s+m+n)*sinx**(2*j-2*s-m-n)*(-1.0_ark)**s
+              hs = sign(1.0_ark,cos_sin)
+              h = abs(cos_sin)
+              !
+              if (h>0) then
+                !
+                hlog = log(h)
+                !
+                gh = g + hlog
+                !
+                if (gh>max_exp) then 
+                  !write(out,"('dlmn error:  the value is too large for exp:',g18.9)")  g
+                  error = 1
+                  d = 0
+                  return 
+                  !stop 'dlmn error:  the value is too large for exp'
+                endif
+                !
+                f = exp(gh)*hs
+                !
+                ss = ss + f
+                !
+              endif
+              !
+              !f = exp(-g)
+              !
+            endif
+            !
+         enddo
+         !
+         !g = faclog(j-m)+faclog(j+m)+faclog(j-n)+faclog(j+n)
+         !
+         !prefactor=exp(g)
+         !
+         d=(-1.0_ark)**(j-n)*ss  !*sqrt(prefactor)
+         !
+   end function dlmn
+
+
+
+   !
+   ! D function conjugated
+   !
+   function ddlmn_conj(j,n,m,phi,theta,chi,info) result (d)
+     integer(ik),intent(in) :: j,m,n
+     integer(ik),optional,intent(out) :: info
+     real(ark),intent(in)   :: phi,chi,theta
+     complex(ark)           :: f,d
+     real(ark)              :: prefactor,x,y
+     integer(ik)            :: error
+     
+         !
+         prefactor=(-1.0_ark)**(n-m)*dlmn(j,-n,-m,theta,error)
+         !
+         x = real(n,ark)*phi ; y = real(m,ark)*chi
+         !
+         f=cmplx(cos(x+y),sin(x+y))
+         !
+         d = f*prefactor
+         !
+         if (present(info)) info = error
+         if (.not.present(info).and.error/=0) then
+            info = error
+            write(out,"('dlmn error:  the value is too large for exp ')")
+            stop 'dlmn error:  the value is too large for exp'
+         endif
+         !
+   end function ddlmn_conj
+
 end module FORT_FUNC
