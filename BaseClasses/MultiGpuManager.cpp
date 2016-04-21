@@ -150,13 +150,13 @@ void MultiGpuManager::AllocateVectors(int nJ,int nsizemax,int dimenmax){
 		half_linestrength.push_back(std::vector<double*>());
 		for(int idegI = 0; idegI < DegenMax; idegI++){
 			half_linestrength.back().push_back(NULL);
-			half_linestrength.back().back() = new double[DimenMax];
+			cudaMallocHost(&half_linestrength.back().back(),size_t(DimenMax)*sizeof(double));
 			tmp_half_linestrength.back().push_back(NULL);
-			tmp_half_linestrength.back().back() = new double[DimenMax];
-			PinVectorMemory(half_linestrength.back().back(),DimenMax);
-			PinVectorMemory(tmp_half_linestrength.back().back(),DimenMax);
-			BaseManager::TrackGlobalMemory(sizeof(double)*BasisSet::GetDimenMax());
-			BaseManager::TrackGlobalMemory(sizeof(double)*BasisSet::GetDimenMax());
+			cudaMallocHost(&tmp_half_linestrength.back().back(),size_t(DimenMax)*sizeof(double));
+			//PinVectorMemory(half_linestrength.back().back(),size_t(DimenMax)*sizeof(double));
+			//PinVectorMemory(tmp_half_linestrength.back().back(),size_t(DimenMax)*sizeof(double));
+			BaseManager::TrackGlobalMemory(sizeof(double)*DimenMax);
+			BaseManager::TrackGlobalMemory(sizeof(double)*DimenMax);
 			
 		}
 	}	
