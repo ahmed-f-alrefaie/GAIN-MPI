@@ -138,7 +138,7 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 	cudaGetDeviceProperties(&devProp, gpu_id);
 	
 	//Lets get some gpu_info.
-	InitializeMemory(size_t(double(devProp.totalGlobalMem)*0.99));
+	InitializeMemory(size_t(double(devProp.totalGlobalMem)*0.95));
 	Log("Gpu ID %d : Total Memory: %12.6f\n",gpu_id,double(GetAvailableMemory())*1e-9);
 	
 
