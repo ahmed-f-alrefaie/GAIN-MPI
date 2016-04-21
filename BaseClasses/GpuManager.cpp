@@ -607,7 +607,7 @@ void GpuManager::ExecuteHalfLs(int indI,int indF,int idegI,int igammaI){
 
 void GpuManager::TransformHalfLsVector(int indI,int indF,int idegI,int igammaI){
 
-	
+	cudaSetDevice(gpu_id);
 	//transform to primitive
 	transform_vector_primitive(basisSets[indI].dimensions,igammaI,inflationData[indI].MaxSymCoeffs,idegI,inflationData[indI].sDeg[igammaI],inflationData[indI].Ntotal[igammaI],inflationData[indI].ijTerms, inflationData[indI].contr,inflationData[indI].N[igammaI],inflationData[indI].repres[igammaI], vectorI,prim_half_ls_vectors[indF][idegI],correlate_half_ls_stream[indF][idegI]);
 
