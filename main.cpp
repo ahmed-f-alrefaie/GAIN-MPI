@@ -300,7 +300,8 @@ int main(int argc, char** argv){
 			float percentage_of_transitions = (float)transitions*100.0/(float)g_transitions;
 			printf("### %d / %d transitions, L/s: %14.3E Pred Total time %8.4f hours [%12.6f]\n",g_transitions,num_trans,lines_per_second,predicted_time,percentage_of_transitions);		
 						
-					
+			if(iLevelI % 30 == 0)
+				Timer::getInstance().PrintTimerInfo();		
 			
 		}
 
