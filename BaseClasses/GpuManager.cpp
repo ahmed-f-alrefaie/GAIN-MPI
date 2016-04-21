@@ -408,7 +408,7 @@ void GpuManager::TransferInflation(int* icontr_, int* ijterm,int dimen,int maxsy
 	
 	inflationData.push_back(tmp_inflate);
 	Log("done!\n");
-	
+	cudaDeviceSynchronize();
 	CheckCudaError("Transfer Inflation");
 
 
