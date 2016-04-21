@@ -46,7 +46,7 @@ private:
 
 	int block_in_mem;
 	int dipole_block;
-
+	bool doing_half_ls;
 	//Basis set information
 	std::vector<GpuBasisSet> basisSets;
 	std::vector<GpuInflation> inflationData;	
@@ -153,13 +153,14 @@ public :
 	double* GetFinalVector(int proc_id){return host_vectorF.at(proc_id);};
 	double* GetLinestrength(int proc_id){return host_linestrength.at(proc_id);};
 	void GetHalfLineStrengthResult(double* half_ls,int indF,int idegI);
-
+	int GetCurrentBlock(){return dipole_block;};
+	bool WillDoHalfLs(){return doing_half_ls;}
 
 	//Update GPU methods
 	void UpdateHalfLinestrength(double* half_ls,int jInd,int ideg);
 	void UpdateEigenVector();
 	void UpdateEigenVector(int proc_id);
-	int GetCurrentBlock(){return dipole_block;};
+	
 	
 	//Work methods
 	void TransformHalfLsVector(int indI,int indF,int idegI,int igammaI);

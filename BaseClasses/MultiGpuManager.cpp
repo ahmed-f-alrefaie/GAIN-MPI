@@ -245,6 +245,7 @@ void MultiGpuManager::ExecuteHalfLs(int iLevelI,int indI,int ndegI,int igammaI,i
 
 	//Get the half linestrength result and apply it to the real half linestrength, we skip this if only one gpu has the result
 	for(int i = 1; i < total_gpus_assigned; i++){
+		if(!m_gpus[i]->WillDoHalfLs()) continue;
 		for(int indF = 0; indF < nJ; indF++){
 		//Get the result from zero
 			for(int idegI = 0; idegI < ndegI; idegI++){

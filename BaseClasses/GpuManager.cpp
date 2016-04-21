@@ -70,10 +70,10 @@ GpuManager::GpuManager(int pgpu_id,int nprocs,bool rotsym) : BaseManager(), gpu_
 
 
 
-
+	
 	Log("GPUManager Init with ID: %i and Nprocs: %i\n",gpu_id,Nprocs);
 	//hls_stream_id = 0;
-
+	doing_half_ls = false;
 }
 
 
@@ -486,6 +486,8 @@ void GpuManager::TransferDipole(Dipole* dipole_,int block){
 
 	dipole_me = dipole_;
 	dipole_block = block;
+
+	doing_half_ls = true;
 	//This will be initialized in the MultiGpuManager Later
 	//Get the availablememory
 	
