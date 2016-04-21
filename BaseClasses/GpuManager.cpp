@@ -709,3 +709,10 @@ void GpuManager::WaitForLineStrengthResult(int proc_id){
 		cudaMemcpyAsync(host_linestrength[proc_id], linestrength[proc_id],sizeof(double)*size_t(MaxDegen)*size_t(MaxDegen),cudaMemcpyDeviceToHost,dot_product_omp_stream[proc_id]);	
 	cudaStreamSynchronize(dot_product_omp_stream[proc_id]);
 }
+
+void GpuManager::ResetHalfLinestrength(int indF,int idegI){
+	cudaSetDevice(gpu_id); 
+	  cudaMemset(half_ls_vectors[indF][idegI],0, DimenMax*sizeof(double));
+	cudaDeviceSynchronize();
+
+}

@@ -160,7 +160,7 @@ public :
 	void UpdateHalfLinestrength(double* half_ls,int jInd,int ideg);
 	void UpdateEigenVector();
 	void UpdateEigenVector(int proc_id);
-	
+	void ResetHalfLinestrength(int indF,int idegI);
 	
 	//Work methods
 	void TransformHalfLsVector(int indI,int indF,int idegI,int igammaI);

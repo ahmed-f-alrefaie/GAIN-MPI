@@ -215,14 +215,19 @@ void MultiGpuManager::ExecuteHalfLs(int iLevelI,int indI,int ndegI,int igammaI,i
 	//transform the vector anyway
 	for(int i = 0; i < m_gpus.size(); i++)
 		for(int indF = 0; indF < nJ; indF++)
-			for(int idegI = 0; idegI < ndegI; idegI++)
+			for(int idegI = 0; idegI < ndegI; idegI++){
+				//Set the half linestrength to zero
+				m_gpus[i]->ResetHalfLinestrength(indF,idegI);
 				m_gpus[i]->TransformHalfLsVector(indI,indF,idegI,igammaI);
+				
+			}
 
 	//Lets loop through the Dipole blocks
 	for(int i = 0; i < m_dipole->GetNumBlocks(); i++){
 		int selected_gpu = m_dipole_dist[i];
 		//Lets wait for the GPU to finish first
 		m_gpus[selected_gpu]->WaitForDevice();
+		//Reset the half_linestrength
 		//If it has the right dipole block then we push it to the device
 		if(m_gpus[selected_gpu]->GetCurrentBlock() != i) m_gpus[i]->SwitchDipoleBlock(i);
 		//Otherwise do the calculations
@@ -232,6 +237,7 @@ void MultiGpuManager::ExecuteHalfLs(int iLevelI,int indI,int ndegI,int igammaI,i
 			
 			for(int idegI = 0; idegI < ndegI; idegI++){
 				//Execute the half linestrength
+				
 				m_gpus[selected_gpu]->ExecuteHalfLs(indI,indF, idegI,igammaI);
 			}
 		}
