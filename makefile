@@ -1,15 +1,32 @@
 goal:   GAIN-MPI.x
 
 #
-MPICC = mpicc
-CCFLAGS =   -O3 -fopenmp -traceback -march=native
-#CCFLAGS = -g -O0 -openmp
-FORT = gfortran
-FFLAGS = -O3 -fopenmp -traceback -march=native -ffree-line-length-none
-
-
+MPICC = mpiicc
+FORT = ifort
 NVCC = nvcc
+
 NVCCFLAGS = --ptxas-options=-v -O3 -Xptxas -v -lineinfo
+
+#Comment on the set of flags for your compiler (GNU or INTEL)
+##-------GNU FLAGS-------------------------------------------
+#CCFLAGS =   -O3 -fopenmp -march=native
+#FFLAGS = -O3 -fopenmp -march=native -ffree-line-length-none
+#C_FORT_LIB = -lgfortran
+
+
+##-------INTEL---------------------------
+CCFLAGS =   -O3 -openmp -xHost
+FFLAGS = -O3 -openmp -xHost
+C_FORT_LIB = -lifcore -limf
+
+
+#CCFLAGS = -g -O0 -openmp
+
+
+
+
+
+
 
 ifeq ($(PLAT),FERMI)
 NVCCFLAGS := $(NVCCFLAGS) -arch sm_21 
@@ -20,7 +37,7 @@ PLAT = KEPLER
 endif
 
 #C_FORT_LIB = -lifcore -limf
-C_FORT_LIB = -lgfortran
+
 
 CUDA_LIB = -L$(CUDA_HOME)/lib64/ -lcudart -lcuda -lcublas
 LIB     =  $(CUDA_LIB) $(C_FORT_LIB)

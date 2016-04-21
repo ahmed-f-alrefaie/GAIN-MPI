@@ -1,5 +1,5 @@
 #include "Output.h"
-
+#include <cmath>
 Output::Output(States* pstates,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,const char* pfilename) : BaseProcess(){
 	Log("Initializing output class\n");
 	
@@ -17,7 +17,9 @@ Output::Output(States* pstates,double ptemperature,double ppartition,double thre
 	}
 
 	beta = PLANCK * VELLGT / (BOLTZ * temperature);
-	Acoef_s_1 = 64.0e-36 * PI*PI*PI*PI  / (3.0 * PLANCK);
+
+
+
 }
 	
 void Output::Initialize(){
@@ -59,7 +61,7 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 	int gammaF = states->GetGamma(iLevelF);
 	int ndegF = states->GetNdeg(iLevelF); 
 	int indexF = states->GetLevel(iLevelF);
-	
+	ls =0.0;
 	for(int idegF=0; idegF < ndegF; idegF++){
 		for(int idegI=0; idegI < ndegI; idegI++){
 			if(!states->DegeneracyFilter(gammaI,gammaF,idegI,idegF))
@@ -69,19 +71,16 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 			ls +=(linestr*linestr);
 		}
 	}
-
-			
-
 	ls/=double(ndegI);
 	if (reduced && ndegF!=1 && ndegI !=1 ) 
 		ls*=double(ndegI);
 
-	A_einst = Acoef_s_1*double((2*jI)+1)*ls*pow(abs(nu_if),3);
+	A_einst = ACOEF*double(2*jI+1)*ls*fabs(nu_if)*fabs(nu_if)*fabs(nu_if);
 
 	if(A_einst < threshold)
 		return;
 
-	sprintf(buffer,"%12.6lf %8d %4d %4d <- %8d %4d %4d %16.9E [%s] ||\n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,lsbuf);
+	sprintf(buffer,"%12.6f %8d %4d %4d <- %8d %4d %4d %16.9E [%s] ||\n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,lsbuf);
 	fprintf(output,"%s",buffer);
 }
 

@@ -16,12 +16,13 @@ private:
 	States* states;	
 	bool to_file;
 	double threshold;
-	double Acoef_s_1;
+
 	double Q;
 	double temperature;
 	double ZPE;
 	bool reduced;
 	double beta;
+
 
 public:
 	Output(States* pstates,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,const char* pfilename=NULL);
