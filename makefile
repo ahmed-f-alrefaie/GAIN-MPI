@@ -1,11 +1,11 @@
 goal:   GAIN-MPI.x
 
 #
-MPICC = mpiicc
-CCFLAGS =   -O3 -openmp -traceback -xHost
+MPICC = mpicc
+CCFLAGS =   -O3 -fopenmp -traceback -march=native
 #CCFLAGS = -g -O0 -openmp
-FORT = ifort
-FFLAGS = -O3 -openmp -traceback -xHost
+FORT = gfortran
+FFLAGS = -O3 -fopenmp -traceback -march=native -ffree-line-length-none
 
 
 NVCC = nvcc
@@ -16,10 +16,11 @@ NVCCFLAGS := $(NVCCFLAGS) -arch sm_21
 else
 CCFLAGS := $(CCFLAGS) -DKEPLER
 NVCCFLAGS := $(NVCCFLAGS) -arch sm_35 -DKEPLER
+PLAT = KEPLER
 endif
 
-C_FORT_LIB = -lifcore -limf
-
+#C_FORT_LIB = -lifcore -limf
+C_FORT_LIB = -lgfortran
 
 CUDA_LIB = -L$(CUDA_HOME)/lib64/ -lcudart -lcuda -lcublas
 LIB     =  $(CUDA_LIB) $(C_FORT_LIB)
@@ -39,7 +40,7 @@ OBJ = BaseProcess.o Util.o Timer.o BaseManager.o TroveDipole.o \
 
 
 GAIN-MPI.x:       $(OBJ) main.o
-	$(MPICC) -o GAIN-MPI.x $(OBJ) $(CCFLAGS) main.o $(LIB)  $(CUDA_INC)
+	$(MPICC) -o GAIN-MPI_$(PLAT).x $(OBJ) $(CCFLAGS) main.o $(LIB)  $(CUDA_INC)
 #CPP
 main.o:       main.cpp
 	$(MPICC) -c main.cpp $(CCFLAGS) $(CUDA_INC)

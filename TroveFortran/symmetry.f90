@@ -303,7 +303,7 @@ contains
     sym%characters = transpose(sym%characters)
     sym%degen=(/1,1,1,1,1,1,1,1/)
     sym%Nelements=(/1,1,1,1,1,1,1,1/)
-    sym%label=(/'Ag','Au','B1g','B1u','B2g','B2u','B3g','B3u'/)
+    sym%label=(/'Ag ','Au ','B1g','B1u','B2g','B2u','B3g','B3u'/)
     !
     o  = 0.0_ark
     p2 = 0.5_ark*pi
@@ -344,7 +344,7 @@ contains
     sym%characters = transpose(sym%characters)
     sym%degen=(/1,1,1,1,1,1,1,1/)
     sym%Nelements=(/1,1,1,1,1,1,1,1/)
-    sym%label=(/'Ag','Au','B1g','B1u','B2g','B2u','B3g','B3u'/)
+    sym%label=(/'Ag ','Au ','B1g','B1u','B2g','B2u','B3g','B3u'/)
     !
     o  = 0.0_ark
     p2 = 0.5_ark*pi
@@ -1681,7 +1681,9 @@ contains
           if (verbose_>=5) then
             write(out,"('igamma,iclass,ioper = ',3i6)") igamma,iclass,ioper
             do ideg = 1,sym%degen(igamma)
-              write(out,"(<sym%degen(igamma)>f18.8)") sym%irr(igamma,ioper)%repres(ideg,:)
+	     ! !dec$ if DEFINED (__INTEL_COMPILER)
+            !  write(out,"(<sym%degen(igamma)>f18.8)") sym%irr(igamma,ioper)%repres(ideg,:)
+	     ! !dec$ end if
             enddo
           endif
           !
