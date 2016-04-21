@@ -134,6 +134,9 @@ private:
 	
 public :
 	GpuManager(int pgpu_id,int nprocs,bool rotsym=false);
+
+
+	//Initialization and allocation methods
 	void InitializeAndTransferConstants(int jmax,int sym_repres,int pmax_degen);
 	void TransferBasisSet(BasisSet* basisSet);
 	void TransferInflation(int* icontr_, int* ijterm,int dimen,int maxsymcoeffs,int matsize,std::vector<double*> repres,std::vector<int*> N,std::vector<int> Ntot,std::vector<int> sym_degen);
@@ -145,33 +148,26 @@ public :
 
 
 
-	
+	//Get Methods
 	double* GetInitialVector(){return host_vectorI;};
 	double* GetFinalVector(int proc_id){return host_vectorF.at(proc_id);};
 	double* GetLinestrength(int proc_id){return host_linestrength.at(proc_id);};
+	void GetHalfLineStrengthResult(double* half_ls,int indF,int idegI);
 
+
+	//Update GPU methods
 	void UpdateHalfLinestrength(double* half_ls,int jInd,int ideg);
+	void UpdateEigenVector();
+	void UpdateEigenVector(int proc_id);
+	int GetCurrentBlock(){return dipole_block;};
+	
+	//Work methods
 	void TransformHalfLsVector(int indI,int indF,int idegI,int igammaI);
 	void ExecuteHalfLs(int indI,int indF,int idegI,int igammaI);
-
-	void GetHalfLineStrengthResult(double* half_ls,int indF,int idegI){
-		cudaSetDevice(gpu_id); 
-		cudaMemcpyAsync(half_ls,half_ls_vectors[indF][idegI],sizeof(double)*size_t(basisSets[indF].dimensions),cudaMemcpyDeviceToHost,transfer_half_ls_stream[indF][idegI]);
-		cudaStreamSynchronize(transfer_half_ls_stream[indF][idegI]);
-	}
-	void UpdateEigenVector();
-	void UpdateEigenVector(int proc_id);	
-
 	void ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int proc);
 
-	int GetCurrentBlock(){return dipole_block;};
-
-	void WaitForLineStrengthResult(int proc_id){
-	cudaSetDevice(gpu_id); 
-		cudaMemcpyAsync(host_linestrength[proc_id], linestrength[proc_id],sizeof(double)*size_t(MaxDegen)*size_t(MaxDegen),cudaMemcpyDeviceToHost,dot_product_omp_stream[proc_id]);	
-	cudaStreamSynchronize(dot_product_omp_stream[proc_id]);
-	}
-
+	//Wait methods
+	void WaitForLineStrengthResult(int proc_id);
 	void WaitForDevice(){cudaSetDevice(gpu_id); cudaDeviceSynchronize();};
 
 };

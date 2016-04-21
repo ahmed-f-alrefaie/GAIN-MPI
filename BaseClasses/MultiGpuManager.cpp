@@ -166,8 +166,9 @@ void MultiGpuManager::AllocateVectors(int nJ,int nsizemax,int dimenmax){
 	
 void MultiGpuManager::UpdateHalfLinestrength(double* half_ls,int jInd,int ideg)
 {
+	memcpy(half_linestrength.at(jInd).at(ideg),half_ls,sizeof(double)*DimenMax);
 	for(int i = 0; i < m_gpus.size(); i++)
-		m_gpus[i]->UpdateHalfLinestrength(half_ls,jInd,ideg);
+		m_gpus[i]->UpdateHalfLinestrength(half_linestrength.at(jInd).at(ideg),jInd,ideg);
 
 
 }

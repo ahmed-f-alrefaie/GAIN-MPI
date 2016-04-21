@@ -288,10 +288,8 @@ void GpuManager::AllocateVectors(int nJ,int nsizemax,int dimenmax){
 		for(int deg = 0; deg < MaxDegen; deg++){
 			prim_half_ls_vectors.back().push_back(NULL);
 			half_ls_vectors.back().push_back(NULL);
-			if(rotsym_do)unsorted_half_ls_vectors.back().push_back(NULL);
 			AllocateGpuMemory((void**)&prim_half_ls_vectors.back().back(),sizeof(double)*size_t(DimenMax));
 			AllocateGpuMemory((void**)&half_ls_vectors.back().back(),sizeof(double)*size_t(DimenMax));
-			if(rotsym_do)AllocateGpuMemory((void**)&unsorted_half_ls_vectors.back().back(),sizeof(double)*size_t(DimenMax));
 		}
 	}
 
@@ -301,10 +299,6 @@ void GpuManager::AllocateVectors(int nJ,int nsizemax,int dimenmax){
 	for(int i = 0; i <Nprocs; i++){
 		vectorF.push_back(NULL);
 		AllocateGpuMemory((void**)&vectorF.back(),sizeof(double)*size_t(NsizeMax));
-		if(rotsym_do){
-			unsorted_vectorF.push_back(NULL);
-			AllocateGpuMemory((void**)&unsorted_vectorF.back(),sizeof(double)*size_t(DimenMax));
-		}
 		prim_vectorF.push_back(NULL);
 		AllocateGpuMemory((void**)&prim_vectorF.back(),sizeof(double)*size_t(DimenMax));
 		linestrength.push_back(NULL);
@@ -517,7 +511,7 @@ void GpuManager::TransferDipole(Dipole* dipole_,int block){
 void GpuManager::UpdateHalfLinestrength(double* half_ls,int jInd,int ideg){
 	cudaSetDevice(gpu_id);
 	TransferToGpu(half_ls_vectors[jInd][ideg],half_ls,sizeof(double)*DimenMax);
-
+	cudaDeviceSynchronize();
 
 }	
 
@@ -699,4 +693,17 @@ void GpuManager::ExecuteDotProduct(int indF,int idegI,int idegF,int igammaF,int 
 	
 
 
+}
+
+void GpuManager::GetHalfLineStrengthResult(double* half_ls,int indF,int idegI){
+		cudaSetDevice(gpu_id); 
+		cudaMemcpyAsync(half_ls,half_ls_vectors[indF][idegI],sizeof(double)*size_t(basisSets[indF].dimensions),cudaMemcpyDeviceToHost,transfer_half_ls_stream[indF][idegI]);
+		cudaStreamSynchronize(transfer_half_ls_stream[indF][idegI]);
+}
+
+
+void GpuManager::WaitForLineStrengthResult(int proc_id){
+	cudaSetDevice(gpu_id); 
+		cudaMemcpyAsync(host_linestrength[proc_id], linestrength[proc_id],sizeof(double)*size_t(MaxDegen)*size_t(MaxDegen),cudaMemcpyDeviceToHost,dot_product_omp_stream[proc_id]);	
+	cudaStreamSynchronize(dot_product_omp_stream[proc_id]);
 }

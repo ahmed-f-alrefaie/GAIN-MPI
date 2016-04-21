@@ -154,17 +154,6 @@ int main(int argc, char** argv){
 
 	double* vector_I = m_gpu->GetInitialVector();
 	
-	
-	std::vector< std::vector<double*> > half_linestrength;
-	for(int i = 0; i < nJ; i++){
-
-		half_linestrength.push_back(std::vector<double*>());
-		for(int idegI = 0; idegI < m_input->GetSymMaxDegen(); idegI++){
-			half_linestrength.back().push_back(NULL);
-			
-		}
-	}
-	
 	eigen = new EigenVector((*m_input));
 
 	eigen->CacheEigenvectors(m_states);
@@ -207,7 +196,8 @@ int main(int argc, char** argv){
 		Timer::getInstance().StartTimer("Half linestrength");
 
 
-		m_gpu->ExecuteHalfLs(iLevelI,indI,ndegI,gammaI,gammaFPair);
+		if(expected_process == rank)
+			m_gpu->ExecuteHalfLs(iLevelI,indI,ndegI,gammaI,gammaFPair);
 		/*	
 		for(int indF = 0; indF < nJ; indF++){
 
