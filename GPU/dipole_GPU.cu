@@ -371,18 +371,18 @@ const double* vector,const double*  threej,double*  half_ls)
 	__shared__ double s_ls_factor[DIPOLE_BLOCK_SIZE];
 	__shared__ int s_icontrI[DIPOLE_BLOCK_SIZE];
 	__shared__ int s_tauI[DIPOLE_BLOCK_SIZE];
-	__shared__ int s_sigmaI[DIPOLE_BLOCK_SIZE];
+	__shared__ double s_sigmaI[DIPOLE_BLOCK_SIZE];
 
 	//The thread_id in the block
 	int t_id = threadIdx.x;	
 	//The global id in the grid
 	int g_id = blockIdx.x*blockDim.x + threadIdx.x;
-
+	int stride = ncontrF*dip_stride_1;
 	//Lower and uper quantum numebrs
 	int icontrF,kI, tauI,tauF,sigmaF, sigmaI,dipole_idx,irootI,kBlockSize;
 
 	//Used to determine which dipole without branching	
-	int kI_kF_eq,tauF_tauI_neq;
+	int kI_kF_eq,tauF_tauI_neq,kI_kF_neq;
 
 	double ls = 0.0,f3j=0.0,final_half_ls,sq_factor;
 	int irootF=blockIdx.x*blockDim.x + threadIdx.x + startF_idx;
@@ -396,8 +396,9 @@ const double* vector,const double*  threej,double*  half_ls)
 		tauF  =  tauF_[irootF] & 1;
 	}
 
-	valid = irootF<(startF_idx+dimenF) && ((icontrF >=startFblock) && (icontrF < endFblock));
 
+	valid = irootF<(startF_idx+dimenF) && ((icontrF >=startFblock) && (icontrF < endFblock));
+	icontrF -= startFblock;
 	sigmaF = (kF % 3)*tauF;
 	int count_dimen;
 	//Delta K = -1
@@ -410,7 +411,7 @@ const double* vector,const double*  threej,double*  half_ls)
 
 
 		kI_kF_eq = (kF==kI); 
-
+		kI_kF_neq = (kF!=kI); 
 		
 		f3j  =  threej[jI + kI*(c_jmax+1) + (jF - jI + 1)*(c_jmax+1)*(c_jmax+1) + (kF - kI +1)*(c_jmax+1)*(c_jmax+1)*3];	
 
@@ -422,12 +423,12 @@ const double* vector,const double*  threej,double*  half_ls)
 				
 			if(local_idx < kBlockSize){
 				s_tauI[t_id] = tauI_[irootI];
-				s_icontrI[t_id] = icorrI_[irootI];
+				s_icontrI[t_id] = icorrI_[irootI]*ncontrF;
 
-				s_sigmaI[t_id] = (kI % 3);
+				sigmaI = (kI % 3)*s_tauI[t_id];
 
-				//ls =f3j*vector[irootI]*(1.0 + (SQRT2 - 1.0)*double(kI_kF_zero)*(!kI_kF_eq));
-				//if(g_id==0)printf("%i ls =%14.3e f3j=%12.6f vector=%14.3e\n",t_id,ls,f3j,vector[irootI]);
+				sigmaI = 2*(~(sigmaI+kI) & 1)-1;
+				s_sigmaI[t_id] = double(sigmaI);
 
 				ls = vector[irootI];		
 				//Will not diverge		
@@ -457,13 +458,12 @@ const double* vector,const double*  threej,double*  half_ls)
 				*/		 
 
 
-					dipole_idx=2*(kI_kF_eq)+ (!kI_kF_eq)*(!tauF_tauI_neq);
+					dipole_idx=2*(kI_kF_eq)+ (kI_kF_neq)*(!tauF_tauI_neq);
 
-					ls *= double((tauF-tauI)*(kI_kF_eq) + (tauF-tauI)*(kF-kI)*(!kI_kF_eq)*( tauF_tauI_neq) - (!kI_kF_eq)*(!tauF_tauI_neq));
+					ls *= double((tauF-tauI)*(kI_kF_eq) + (tauF-tauI)*(kF-kI)*(kI_kF_neq)*( tauF_tauI_neq) - (kI_kF_neq)*(!tauF_tauI_neq));
 
-					sigmaI = s_sigmaI[i]*tauI;
-					sigmaI = 2*(~(sigmaI+kI) & 1)-1;
-					final_half_ls+=ls*double(sigmaI)*dipole_me[icontrF-startFblock + s_icontrI[i]*ncontrF +dipole_idx*dip_stride_1*ncontrF];
+
+					final_half_ls+=ls*s_sigmaI[i]*dipole_me[icontrF + s_icontrI[i] +dipole_idx*stride];
 ;//f3j;//ls;// double(sigmaI)*ls*dipole_me[icontrF + s_icontrI[i + b_start]*dip_stride_1 + dipole_idx*dip_stride_2];
 				}
 					
