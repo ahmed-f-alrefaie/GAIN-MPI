@@ -136,6 +136,7 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 	//Lets get some data goin:
 	cudaDeviceProp devProp;
 	cudaGetDeviceProperties(&devProp, gpu_id);
+	devProp.totalGlobalMem/= 3l;
 	
 	//Lets get some gpu_info.
 	InitializeMemory(size_t(double(devProp.totalGlobalMem)*0.95));
@@ -232,7 +233,7 @@ void GpuManager::TransferBasisSet(BasisSet* basisSet){
 	if(basisSet->GetKBlock() != NULL){
 
 		//Check for consistency
-		int j0Size = basisSet->GetKBlock()[0];
+		int j0Size = basisSet->GetKBlock()[0]*2;
 		bool K_fast = true;
 		for(int i = 1; i <= tmp_bset.J; i++){
 			K_fast &= basisSet->GetKBlock()[i] == j0Size;
@@ -639,7 +640,7 @@ void GpuManager::ExecuteKBlockHalfLs(int indI,int indF,int idegI,int igammaI){
 	}
 
 	for(int kF=0; kF < basisSets[indF].J+1; kF++){
-			if(fast_K[indI]){
+			if(false){
 			 compute_gpu_half_linestrength_fast(
 							basisSets[indF].host_KBlock[kF],
 							basisSets[indI].dimensions,

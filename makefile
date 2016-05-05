@@ -6,7 +6,7 @@ FORT = ifort
 NVCC = nvcc
 
 NVCCFLAGS = --ptxas-options=-v -O3 -Xptxas -v -lineinfo
-
+#NVCCFLAGS = --ptxas-options=-v -G -g -O0 -Xptxas -v -lineinfo
 #Comment on the set of flags for your compiler (GNU or INTEL)
 ##-------GNU FLAGS-------------------------------------------
 #CCFLAGS =   -O3 -fopenmp -march=native
@@ -18,7 +18,9 @@ NVCCFLAGS = --ptxas-options=-v -O3 -Xptxas -v -lineinfo
 CCFLAGS =   -O3 -openmp -xHost
 FFLAGS = -O3 -openmp -xHost
 C_FORT_LIB = -lifcore -limf
-
+#CCFLAGS =   -g -O0 -openmp
+#FFLAGS = -g -O0 -openmp
+#C_FORT_LIB = -lifcore -limf
 
 #CCFLAGS = -g -O0 -openmp
 

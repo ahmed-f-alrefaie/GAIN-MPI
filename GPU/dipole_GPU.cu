@@ -737,7 +737,7 @@ const double* vector,const double* __restrict__  threej,double*  half_ls)
 	volatile __shared__ double s_ls_factor[DIPOLE_BLOCK_SIZE];
 	volatile __shared__ int s_icontrI[DIPOLE_BLOCK_SIZE];
 	volatile __shared__ int s_tauI[DIPOLE_BLOCK_SIZE];
-	volatile __shared__ int s_sigmaI[DIPOLE_BLOCK_SIZE];;
+	volatile __shared__ double s_sigmaI[DIPOLE_BLOCK_SIZE];;
 	int t_id = threadIdx.x;
 	//int b_size = 32;//BLOCK_SIZE;
 	int b_start = (threadIdx.x/WARP_SIZE)*WARP_SIZE;
@@ -791,7 +791,7 @@ const double* vector,const double* __restrict__  threej,double*  half_ls)
 				sigmaI = 2*(~(sigmaI+kI) & 1)-1;
 
 
-				s_sigmaI[t_id] = sigmaI;
+				s_sigmaI[t_id] = double(sigmaI);
 				//Perform calculations
 				kI_kF_eq = (kF==kI); 	  
 				kI_kF_zero = ((kI*kF) != 0); 
@@ -814,12 +814,12 @@ const double* vector,const double* __restrict__  threej,double*  half_ls)
 
 				ls *= (tauF-tauI)*(kI_kF_eq) + (tauF-tauI)*(kF-kI)*(!kI_kF_eq)*( tauF_tauI_neq) - (!kI_kF_eq)*(!tauF_tauI_neq);
 
-				if(valid) final_half_ls+= double(s_sigmaI[i + b_start])*ls*dipole_me[icontrF + s_icontrI[i + b_start]*ncontrF + dipole_idx*dip_stride_1*ncontrF];
+				if(valid) final_half_ls+= s_sigmaI[i + b_start]*ls*dipole_me[icontrF + s_icontrI[i + b_start]*ncontrF + dipole_idx*dip_stride_1*ncontrF];
 					
 			} 
 	
 	
-			s_ls_factor[t_id]=0.0;
+			//s_ls_factor[t_id]=0.0;
 							
 		}
 	}

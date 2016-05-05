@@ -42,7 +42,7 @@ public:
 	size_t GetDipoleSize(){ return dipole_size;}
 	size_t GetDipoleSizeBytes(){return dipole_size*sizeof(double);}
 	int GetNumBlocks(){return num_blocks;};
-	bool IsBlocked(){return block_form;}
+	bool IsBlocked(){return (num_blocks > 1);}
 	double* GetDipolePiece(int block){ return dipole_me.at(block).dipole_me;};
 	int GetDipoleStart(int block){ return dipole_me.at(block).startF;};
 	int GetDipoleEnd(int block){ return dipole_me.at(block).endF;};

@@ -108,8 +108,9 @@ void MultiGpuManager::TransferDipole(Dipole* dipole_)
 	//Lets distrubute it evenly
 	for(int i = 0; i < m_dipole->GetNumBlocks(); i++){
 		if(cur_gpu >= total_gpus_assigned) cur_gpu=0;		
-		m_dipole_dist.push_back(cur_gpu++);
-		Log("Dipole block %d is being given to the %d(st/th) GPU we are managing\n",i,cur_gpu-1);
+		m_dipole_dist.push_back(cur_gpu);
+		Log("Dipole block %d is going to be given to the %d(st/th) GPU we are managing\n",i,cur_gpu);
+		cur_gpu++;
 
 	}
 	cur_gpu=0;
@@ -229,7 +230,7 @@ void MultiGpuManager::ExecuteHalfLs(int iLevelI,int indI,int ndegI,int igammaI,i
 		m_gpus[selected_gpu]->WaitForDevice();
 		//Reset the half_linestrength
 		//If it has the right dipole block then we push it to the device
-		if(m_gpus[selected_gpu]->GetCurrentBlock() != i) m_gpus[i]->SwitchDipoleBlock(i);
+		if(m_gpus[selected_gpu]->GetCurrentBlock() != i) m_gpus[selected_gpu]->SwitchDipoleBlock(i);
 		//Otherwise do the calculations
 		for(int indF = 0; indF < nJ; indF++){
 			if(!m_states->FilterAnyTransitionsFromJ(iLevelI,m_jvals[indF]))
@@ -237,7 +238,7 @@ void MultiGpuManager::ExecuteHalfLs(int iLevelI,int indI,int ndegI,int igammaI,i
 			
 			for(int idegI = 0; idegI < ndegI; idegI++){
 				//Execute the half linestrength
-				
+				if(!m_states->DegeneracyFilter(igammaI,igammaF,idegI,0)) continue;
 				m_gpus[selected_gpu]->ExecuteHalfLs(indI,indF, idegI,igammaI);
 			}
 		}
