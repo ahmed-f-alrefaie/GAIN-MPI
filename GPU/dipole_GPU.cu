@@ -95,7 +95,7 @@ __global__ void device_compute_1st_half_ls_flipped_dipole_shared_block_nontrove(
 const int dimenF,const int dimenI,const int jI,const int jF,
 const int kF,const int* tauI_,const int* tauF_, const int* icorrI_,const int* icorrF_,const int startF_idx,int startI_idx,const int startFblock,const int endFblock,const int ncontrF,const int* kblock_size_,
 const double* __restrict__ dipole_me,
-const double* vector,const double*  threej,double*  half_ls);
+const double* vector,const double* __restrict__ threej,double*  half_ls);
 
 
 __global__ void device_compute_1st_half_ls_flipped_dipole_shared_rotsym_block_nontrove(
@@ -110,7 +110,10 @@ const int* kF_,const int* ktauI_,const int* ktauF_, const int* icorrI_,const int
 const double* __restrict__ dipole_me,const double* __restrict__ wigner_,
 const double* vector,double*  half_ls);
 
-
+__global__ void device_compute_1st_half_ls_flipped_dipole_shared_blocks_fast(const int dimenF,const int dimenI,const int j0dimen,const int jI,const int jF,
+const int kF,const int* tauI_,const int* tauF_, const int* icorrI_,const int* icorrF_,const int startFblock,const int endFblock,const int ncontrF,
+const double* __restrict__ dipole_me,
+const double* vector,const double* __restrict__  threej,double*  half_ls);
 
 
 void copy_symmetry_constants(int sym_nrepres,int maxdeg){
@@ -200,6 +203,32 @@ const double* vector,const double*  threej,double*  half_ls,cudaStream_t stream)
 	device_compute_1st_half_ls_flipped_dipole_shared_block_nontrove<<<half_grid_size,DIPOLE_BLOCK_SIZE,0,stream>>>(
 	dimenF,dimenI,jI,jF,
 	kF,tauI_,tauF_,icorrI_,icorrF_,startF_idx,startI_idx,startFblock,endFblock,ncontrF,kblock_size_,
+	dipole_me,
+	vector,threej,half_ls);
+
+
+}
+
+void compute_gpu_half_linestrength_fast(const int dimenF,const int dimenI,const int j0dimen,const int jI,const int jF,
+const int kF,const int* tauI_,const int* tauF_, const int* icorrI_,const int* icorrF_,const int startFblock,const int endFblock,const int ncontrF,
+const double* dipole_me,
+const double* vector,const double*   threej,double*  half_ls,cudaStream_t stream){
+	
+	int half_grid_size = (int)ceil((float)(dimenF)/(float)DIPOLE_BLOCK_SIZE);
+				//printf("half_grid params: b:%i t:%i N:%i\n",half_grid_size,DIPOLE_BLOCK_SIZE,DIPOLE_BLOCK_SIZE*half_grid_size);
+	//device_compute_1st_half_ls_flipped_dipole_shared_nontrove<<<half_grid_size,DIPOLE_BLOCK_SIZE,0,half_ls_stream[stream_id]>>>(h_k_blocks[indF][k],dimen[indI],jI,
+	//										jF,k,tau[indI],tau[indF],icorr[indI],icorr[indF],
+	//										k_start[indF][k],k_start[indI][max(k-1,0)],k_block_size[indI],
+	//										cuda_dipole_me,
+	//										corr_vector,g_threeJ,
+	//										g_half_ls[indF][ideg]);
+				//cudaDeviceSynchronize();
+	//			CheckCudaError("K-block");
+	
+	
+	device_compute_1st_half_ls_flipped_dipole_shared_blocks_fast<<<half_grid_size,DIPOLE_BLOCK_SIZE,0,stream>>>(
+	dimenF,dimenI,j0dimen,jI,jF,
+	kF,tauI_,tauF_,icorrI_,icorrF_,startFblock,endFblock,ncontrF,
 	dipole_me,
 	vector,threej,half_ls);
 
@@ -364,7 +393,7 @@ __global__ void device_compute_1st_half_ls_flipped_dipole_shared_block_nontrove(
 const int dimenF,const int dimenI,const int jI,const int jF,
 const int kF,const int* tauI_,const int* tauF_, const int* icorrI_,const int* icorrF_,const int startF_idx,int startI_idx,const int startFblock,const int endFblock,const int ncontrF,const int* kblock_size_,
 const double* __restrict__ dipole_me,
-const double* vector,const double*  threej,double*  half_ls)
+const double* vector,const double* __restrict__  threej,double*  half_ls)
 {
 
 	//shared memory to chache vectors and quanta
@@ -692,6 +721,116 @@ const double* vector,double*  half_ls)
 
 
 }
+
+
+///K-fast---method
+
+
+__global__ void device_compute_1st_half_ls_flipped_dipole_shared_blocks_fast(const int dimenF,const int dimenI,const int j0dimen,const int jI,const int jF,
+const int kF,const int* tauI_,const int* tauF_, const int* icorrI_,const int* icorrF_,const int startFblock,const int endFblock,const int ncontrF,
+const double* __restrict__ dipole_me,
+const double* vector,const double* __restrict__  threej,double*  half_ls)
+{
+
+	//const int irootF = blockIdx.x * blockDim.x + threadIdx.x;
+	//double sq2 = 1.0/sqrt(2.0);
+	volatile __shared__ double s_ls_factor[DIPOLE_BLOCK_SIZE];
+	volatile __shared__ int s_icontrI[DIPOLE_BLOCK_SIZE];
+	volatile __shared__ int s_tauI[DIPOLE_BLOCK_SIZE];
+	volatile __shared__ int s_sigmaI[DIPOLE_BLOCK_SIZE];;
+	int t_id = threadIdx.x;
+	//int b_size = 32;//BLOCK_SIZE;
+	int b_start = (threadIdx.x/WARP_SIZE)*WARP_SIZE;
+	int w_id = threadIdx.x % WARP_SIZE;
+	int icontrF, kI, tauI,tauF,sigmaF, sigmaI, dipole_idx;
+	//These are o remove if statements
+	int kI_kF_eq,tauF_tauI_neq,kI_kF_zero;
+	double ls = 0.0,f3j=0.0,final_half_ls,sq_factor;
+	int startF = (2*(kF-1)+1)*j0dimen;
+	startF <0? startF=0: startF=startF;
+	s_ls_factor[t_id]=0.0;
+	int valid = 0;
+	//__syncthreads();
+	//for(int irootF=blockIdx.x * blockDim.x + threadIdx.x + startF; irootF < endF; irootF+=blockDim.x*gridDim.x){
+	int irootF=blockIdx.x*blockDim.x + threadIdx.x + startF;
+	//kF=-10000;
+	icontrF=-10;
+	tauF = 0;
+
+	//for(irootF=blockIdx.x * blockDim.x + threadIdx.x + startF; irootF < endF; irootF+=blockDim.x*gridDim.x){	
+		final_half_ls = 0.0;
+	if(irootF<dimenF){
+		//If we are out of range the we always acces the zeroth element
+		icontrF =icorrF_[irootF];
+		tauF  =  tauF_[irootF] & 1;
+	}
+
+	valid = ((icontrF >=startFblock) && (icontrF < endFblock));
+	icontrF-=startFblock;
+
+	sigmaF = (kF % 3)*tauF;
+	kI = max(kF-1,0);
+	
+	for(kI=kI; kI<kF+2 && kI<(jI+1); kI++){
+		int startI = min((2*(kI-1)+1)*j0dimen,0);
+		int endI = (2*kI+1)*j0dimen;
+		kI*kF!=0 ? sq_factor=SQRT2 : sq_factor=1.0;
+		f3j  =  threej[jI + kI*(c_jmax+1) + (jF - jI + 1)*(c_jmax+1)*(c_jmax+1) + (kF - kI +1)*(c_jmax+1)*(c_jmax+1)*3];
+		for(int b_irootI=startI; b_irootI < endI; b_irootI+=WARP_SIZE){
+
+			int irootI = b_irootI+w_id;
+
+			s_ls_factor[t_id]=0.0;
+
+			if(irootI < b_irootI+endI){
+				//Cache into memory
+				s_tauI[t_id] = tauI_[irootI] & 1;
+				s_icontrI[t_id] = icorrI_[irootI];
+				
+				sigmaI = (kI % 3)*tauI;
+				sigmaI = 2*(~(sigmaI+kI) & 1)-1;
+
+
+				s_sigmaI[t_id] = sigmaI;
+				//Perform calculations
+				kI_kF_eq = (kF==kI); 	  
+				kI_kF_zero = ((kI*kF) != 0); 
+
+				ls =f3j*vector[irootI]*sq_factor;
+				s_ls_factor[t_id] = ls;//1.0;//ls;
+			}
+					//__threadfence();
+				
+					//__syncthreads();
+			for(int i = 0; i < WARP_SIZE; i++){
+
+				ls= s_ls_factor[i + b_start];
+
+				if(ls==0.0) continue;
+				tauI=s_tauI[i + b_start];
+				tauF_tauI_neq = (tauF!=tauI);
+
+				dipole_idx=2*(kI_kF_eq)+ (!kI_kF_eq)*(!tauF_tauI_neq);
+
+				ls *= (tauF-tauI)*(kI_kF_eq) + (tauF-tauI)*(kF-kI)*(!kI_kF_eq)*( tauF_tauI_neq) - (!kI_kF_eq)*(!tauF_tauI_neq);
+
+				if(valid) final_half_ls+= double(s_sigmaI[i + b_start])*ls*dipole_me[icontrF + s_icontrI[i + b_start]*ncontrF + dipole_idx*dip_stride_1*ncontrF];
+					
+			} 
+	
+	
+			s_ls_factor[t_id]=0.0;
+							
+		}
+	}
+	
+
+	if(irootF<dimenF && valid){
+		final_half_ls *= double(2*(~(sigmaF) & 1)-1);
+		half_ls[irootF] = final_half_ls;
+	}
+}
+
 
 
 __global__ void device_sort_vector(const int dimenI,const int* N_, const double* c_vec_,double* vec_){

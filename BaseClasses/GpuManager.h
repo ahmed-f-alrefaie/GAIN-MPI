@@ -50,7 +50,7 @@ private:
 	//Basis set information
 	std::vector<GpuBasisSet> basisSets;
 	std::vector<GpuInflation> inflationData;	
-	
+	std::vector<bool> fast_K;
 
 
 	//////////////////Host memory///////////////////

@@ -222,7 +222,6 @@ void GpuManager::TransferBasisSet(BasisSet* basisSet){
 
 	Log("Basis set is dimension size %d\n",tmp_bset.dimensions);
 
-
 	//K Tau
 	AllocateGpuMemory((void**)&tmp_bset.KTau,sizeof(int)*size_t(tmp_bset.dimensions));
 	TransferToGpu(tmp_bset.KTau, basisSet->GetKTau(),sizeof(int)*size_t(tmp_bset.dimensions));
@@ -231,6 +230,18 @@ void GpuManager::TransferBasisSet(BasisSet* basisSet){
 	TransferToGpu(tmp_bset.normal_K, basisSet->GetK(),sizeof(int)*size_t(tmp_bset.dimensions));
 	//KBlocks
 	if(basisSet->GetKBlock() != NULL){
+
+		//Check for consistency
+		int j0Size = basisSet->GetKBlock()[0];
+		bool K_fast = true;
+		for(int i = 1; i <= tmp_bset.J; i++){
+			K_fast &= basisSet->GetKBlock()[i] == j0Size;
+		}		
+		
+		fast_K.push_back(K_fast);
+		if(K_fast){
+			Log("Basis set J=%d can use the faster linestrength\n",tmp_bset.J);
+		}
 		AllocateGpuMemory((void**)&tmp_bset.Kblock_size,sizeof(int)*size_t(tmp_bset.J+1));
 		TransferToGpu(tmp_bset.Kblock_size, basisSet->GetKBlock(),sizeof(int)*size_t(tmp_bset.J+1));	
 	}
@@ -628,6 +639,32 @@ void GpuManager::ExecuteKBlockHalfLs(int indI,int indF,int idegI,int igammaI){
 	}
 
 	for(int kF=0; kF < basisSets[indF].J+1; kF++){
+			if(fast_K[indI]){
+			 compute_gpu_half_linestrength_fast(
+							basisSets[indF].host_KBlock[kF],
+							basisSets[indI].dimensions,
+							basisSets[indF].host_KBlock[0],
+
+							basisSets[indI].J,
+							basisSets[indF].J,
+							
+							kF,
+					
+							basisSets[indI].KTau,
+							basisSets[indF].KTau, 
+
+							basisSets[indI].vib_index,
+							basisSets[indF].vib_index,
+							dipole_me->GetDipoleStart(dipole_block),
+							dipole_me->GetDipoleEnd(dipole_block),
+							dipole_me->GetDipoleNcontr(dipole_block),
+
+							gpu_dipole,
+							prim_half_ls_vectors[indF][idegI],
+							threejsymbols,
+							half_ls_vectors[indF][idegI],
+							half_ls_stream[indF][idegI][GetHStreamId(indF,idegI)]);
+			}else{
 			compute_gpu_half_linestrength_(
 							basisSets[indF].host_KBlock[kF],
 							basisSets[indI].dimensions,
@@ -657,6 +694,7 @@ void GpuManager::ExecuteKBlockHalfLs(int indI,int indF,int idegI,int igammaI){
 							threejsymbols,
 							half_ls_vectors[indF][idegI],
 							half_ls_stream[indF][idegI][GetHStreamId(indF,idegI)]);
+			}
 		
 	}
 

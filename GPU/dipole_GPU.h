@@ -30,6 +30,11 @@ const double* vector,const double*  threej,double*  half_ls,cudaStream_t stream)
 //const double* dipole_me,
 //const double* vector,const double*  threej,double*  half_ls,cudaStream_t stream);
 
+void compute_gpu_half_linestrength_fast(const int dimenF,const int dimenI,const int j0dimen,const int jI,const int jF,
+const int kF,const int* tauI_,const int* tauF_, const int* icorrI_,const int* icorrF_,const int startFblock,const int endFblock,const int ncontrF,
+const double* dipole_me,
+const double* vector,const double*   threej,double*  half_ls,cudaStream_t stream);
+
 void compute_gpu_half_linestrength_rotsym_(
 const int dimenF,const int dimenI,const int nlevelI,const int nlevelF,const int sym_max_degen,const int* kI_,
 const int* kF_,const int* ktauI_,const int* ktauF_, const int* icorrI_,const int* icorrF_,const int startFblock,const int endFblock,const int ncontrF,
