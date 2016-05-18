@@ -10,6 +10,62 @@
 #include <vector>
 #include <cstring>
 #include <string>
+#include <iostream>
+
+static void show_usage(char* argv)
+{
+    std::cerr << "Usage: " << argv << " <input file> [options]\n"
+              << "Options:\n"
+              << "\t-h,--help\t\tShow this help message\n"
+              << "\t-o,--output FILENAME\tOutput linestrengths to files with format FILENAME__[MPI rank]__.out\n"
+	      << "\t-i,--compute-intensity\tCompute absolute intensities in cm/molecule\n"
+              << "\t-f,--full-linestrength\tOutput all linestrength components\n"
+              << std::endl;
+}
+
+
+void handle_args(int argc,char** argv, char* input_filename,char* output_filename, bool & quit_prog, bool & do_filename,bool & compute_intensity,bool & full_linestrength){
+
+    if (argc < 2) {
+        show_usage(argv[0]);
+        quit_prog = true;
+	return;
+    }
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if ((arg == "-h") || (arg == "--help")) {
+            show_usage(argv[0]);
+	    quit_prog = true;
+		return;
+            //return 0;
+        } else if ((arg == "-o") || (arg == "--output")) {
+            if (i + 1 < argc) { // Make sure we aren't at the end of argv!
+                strcpy(output_filename,argv[i++]);// Increment 'i' so we don't get the argument as the next argv[i].
+		do_filename = true;
+            } else { // Uh-oh, there was no argument to the output option.
+                  std::cerr << "--output option requires one argument." << std::endl;
+		quit_prog = true;
+                return ;
+            }  
+        } else if ((arg == "-f") || (arg == "--full-linestrength")){ 
+		full_linestrength = true;
+	}else if ((arg == "-i") || (arg == "--compute-intensity")){
+		compute_intensity = true;
+	}else if(i==1){
+            strcpy(input_filename,argv[i]);
+        }else{
+            show_usage(argv[0]);
+	    quit_prog = true;
+		return;
+	}
+    }
+
+
+}
+
+
+
+
 
 int main(int argc, char** argv){
 
@@ -19,6 +75,8 @@ int main(int argc, char** argv){
 	int nProcs;
 	bool quit_prog = false;
 	bool do_file = false;
+	bool full_line = false;
+	bool compute_intens = false;
 	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 	MPI_Comm_size(MPI_COMM_WORLD,&nProcs);	
 	char input_filename[1024];
@@ -33,7 +91,7 @@ int main(int argc, char** argv){
 
 	//Lets read the arguments
 	if(rank ==0){
-		if(argc<2){
+		/*if(argc<2){
 			printf("Usage is [-f] <input file> [<output filename>]\n");
 			quit_prog = true;
 
@@ -57,20 +115,25 @@ int main(int argc, char** argv){
 		}
 
 
-
+		*/
+		handle_args(argc,argv,input_filename,output_filename,quit_prog,do_file,compute_intens,full_line);
 
 	}
 
 
 	MPI_Bcast(&quit_prog, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-	MPI_Bcast(input_filename, 1024, MPI_CHAR, 0, MPI_COMM_WORLD);
-	MPI_Bcast(output_filename, 1024, MPI_CHAR, 0, MPI_COMM_WORLD);
-	MPI_Bcast(&do_file,  1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-
 	if(quit_prog){
 		MPI_Finalize();
 		return 0;
 	}
+
+	MPI_Bcast(input_filename, 1024, MPI_CHAR, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&do_file,  1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+	if(do_file){
+		MPI_Bcast(output_filename, 1024, MPI_CHAR, 0, MPI_COMM_WORLD);
+	}
+	MPI_Bcast(&compute_intens,  1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&full_line,  1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
 
 	Input* m_input;
 	States* m_states;
@@ -95,10 +158,10 @@ int main(int argc, char** argv){
 
 
 	//Initialize output
-	if(do_file)
-		m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),m_input->IsReduced(),output_filename);
-	else
-		m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),m_input->IsReduced());
+
+	m_output = new Output(m_states,m_input->GetGNS(),m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),m_input->IsReduced(),do_file,output_filename,full_line,compute_intens);
+
+		//m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),m_input->IsReduced());
 
 	m_output->Initialize();
 	std::vector<int> m_jvals = m_input->GetJvals();

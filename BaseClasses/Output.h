@@ -15,8 +15,10 @@ private:
 	int maxDeg;
 	States* states;	
 	bool to_file;
+	bool output_linestrengths;
+	bool compute_intensities;
 	double threshold;
-
+	std::vector<double> gns;
 	double Q;
 	double temperature;
 	double ZPE;
@@ -25,7 +27,7 @@ private:
 
 
 public:
-	Output(States* pstates,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,const char* pfilename=NULL);
+	Output(States* pstates,std::vector<double> p_gns,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,bool do_file=false,const char* pfilename=NULL,bool full_line=false,bool compute_intens=false);
 	
 	void Initialize();
 

@@ -1,19 +1,26 @@
 #include "Output.h"
 #include <cmath>
-Output::Output(States* pstates,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,const char* pfilename) : BaseProcess(){
+Output::Output(States* pstates,std::vector<double> p_gns,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,bool do_file,const char* pfilename,bool full_line,bool compute_intens) : BaseProcess(){
 	Log("Initializing output class\n");
 	
 	states = pstates;
 	temperature = ptemperature;
 	Q = ppartition;
 	maxDeg=pmaxDeg;
+	gns = p_gns;
 	threshold=thresh;
-	to_file = false;
+	to_file = do_file;
 	reduced = red;
-	if(pfilename != NULL){
+	output_linestrengths = full_line;
+	compute_intensities = compute_intens;
+	
+	if(pfilename != NULL && do_file){
 		sprintf(filename,"%s__%d__.out",pfilename,m_process_id);
 		to_file = true;
 		
+	}else{
+		//printf("No filename!\n");
+		to_file = false;
 	}
 
 	beta = PLANCK * VELLGT / (BOLTZ * temperature);
@@ -50,6 +57,8 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 	char lsbuf[300];
 	lsbuf[0]='\0';
 
+	
+	double energyI = states->GetEnergy(iLevelI);
 	double nu_if = states->GetEnergy(iLevelF) - states->GetEnergy(iLevelI);
 	//Lower
 	int jI= states->GetJ(iLevelI);
@@ -67,8 +76,10 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 			if(!states->DegeneracyFilter(gammaI,gammaF,idegI,idegF))
 				continue;
 			linestr = linestrength[idegI + idegF*maxDeg];
-			sprintf(lsbuf + strlen(lsbuf)," %16.9E",linestr);		
 			ls +=(linestr*linestr);
+			if(output_linestrengths)
+				sprintf(lsbuf + strlen(lsbuf)," %16.9E",linestr);		
+			
 		}
 	}
 	ls/=double(ndegI);
@@ -80,8 +91,20 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 	if(A_einst < threshold)
 		return;
 
-	sprintf(buffer,"%12.6f %8d %4d %4d <- %8d %4d %4d %16.9E [%s] ||\n",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst,lsbuf);
-	fprintf(output,"%s",buffer);
+
+	sprintf(buffer,"%12.6f %8d %4d %4d <- %8d %4d %4d %16.9E ",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst);
+	if(compute_intensities){
+		double intens = CMCOEF*ACOEF*gns[gammaF]*(2.0*double(jF) + 1.0)
+							*std::exp(-beta*energyI)*(1.0-std::exp(-beta*nu_if))/(nu_if*nu_if*Q);
+		sprintf(buffer + strlen(buffer), "%16.9E ",intens);
+		
+	}
+	if(output_linestrengths){
+		sprintf(buffer + strlen(buffer), "[ %s ] ",lsbuf);
+	}
+
+
+	fprintf(output,"%s || \n",buffer);
 }
 
 void Output::Close(){
