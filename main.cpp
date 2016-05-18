@@ -40,7 +40,7 @@ void handle_args(int argc,char** argv, char* input_filename,char* output_filenam
             //return 0;
         } else if ((arg == "-o") || (arg == "--output")) {
             if (i + 1 < argc) { // Make sure we aren't at the end of argv!
-                strcpy(output_filename,argv[i++]);// Increment 'i' so we don't get the argument as the next argv[i].
+                strcpy(output_filename,argv[++i]);// Increment 'i' so we don't get the argument as the next argv[i].
 		do_filename = true;
             } else { // Uh-oh, there was no argument to the output option.
                   std::cerr << "--output option requires one argument." << std::endl;
