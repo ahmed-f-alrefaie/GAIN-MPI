@@ -159,7 +159,7 @@ int main(int argc, char** argv){
 
 	//Initialize output
 
-	m_output = new Output(m_states,m_input->GetGNS(),m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),m_input->IsReduced(),do_file,output_filename,full_line,compute_intens);
+	m_output = new Output(m_states,m_input->GetGNS(),m_input->GetTemperature(),m_input->GetZPE(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),m_input->IsReduced(),do_file,output_filename,full_line,compute_intens);
 
 		//m_output = new Output(m_states,m_input->GetTemperature(),m_input->GetPartition(),m_input->GetThreshold(),m_input->GetSymMaxDegen(),m_input->IsReduced());
 

@@ -1,6 +1,6 @@
 #include "Output.h"
 #include <cmath>
-Output::Output(States* pstates,std::vector<double> p_gns,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,bool do_file,const char* pfilename,bool full_line,bool compute_intens) : BaseProcess(){
+Output::Output(States* pstates,std::vector<double> p_gns,double ptemperature,double pZPE,double ppartition,double thresh,int pmaxDeg,bool red,bool do_file,const char* pfilename,bool full_line,bool compute_intens) : BaseProcess(){
 	Log("Initializing output class\n");
 	
 	states = pstates;
@@ -10,6 +10,7 @@ Output::Output(States* pstates,std::vector<double> p_gns,double ptemperature,dou
 	gns = p_gns;
 	threshold=thresh;
 	to_file = do_file;
+	ZPE = pZPE;
 	reduced = red;
 	output_linestrengths = full_line;
 	compute_intensities = compute_intens;
@@ -60,6 +61,9 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 	
 	double energyI = states->GetEnergy(iLevelI);
 	double nu_if = states->GetEnergy(iLevelF) - states->GetEnergy(iLevelI);
+	energyI-=ZPE;
+	if(nu_if < 1e-40)
+		return;
 	//Lower
 	int jI= states->GetJ(iLevelI);
 	int gammaI = states->GetGamma(iLevelI);
@@ -94,7 +98,7 @@ void Output::OutputLinestrength(int iLevelI,int iLevelF,double* linestrength){
 
 	sprintf(buffer,"%12.6f %8d %4d %4d <- %8d %4d %4d %16.9E ",nu_if,indexF+1,jF,gammaF+1,indexI+1,jI,gammaI+1,A_einst);
 	if(compute_intensities){
-		double intens = CMCOEF*ACOEF*gns[gammaF]*(2.0*double(jF) + 1.0)
+		double intens = CMCOEF*A_einst*gns[gammaF]*(2.0*double(jF) + 1.0)
 							*std::exp(-beta*energyI)*(1.0-std::exp(-beta*nu_if))/(nu_if*nu_if*Q);
 		sprintf(buffer + strlen(buffer), "%16.9E ",intens);
 		

@@ -20,6 +20,7 @@ private:
 	double threshold;
 	std::vector<double> gns;
 	double Q;
+	double cmcoef;
 	double temperature;
 	double ZPE;
 	bool reduced;
@@ -27,7 +28,7 @@ private:
 
 
 public:
-	Output(States* pstates,std::vector<double> p_gns,double ptemperature,double ppartition,double thresh,int pmaxDeg,bool red,bool do_file=false,const char* pfilename=NULL,bool full_line=false,bool compute_intens=false);
+	Output(States* pstates,std::vector<double> p_gns,double ptemperature,double pZPE,double ppartition,double thresh,int pmaxDeg,bool red,bool do_file=false,const char* pfilename=NULL,bool full_line=false,bool compute_intens=false);
 	
 	void Initialize();
 
