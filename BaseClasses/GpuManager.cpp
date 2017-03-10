@@ -117,7 +117,7 @@ void GpuManager::TransferToGpu(void* dst,const void* src,size_t size){
 void GpuManager::TransferToHost(void* dst,const void* src,size_t size){
 		cudaSetDevice(gpu_id);
 		if(cudaSuccess != cudaMemcpy(dst,src,size,cudaMemcpyDeviceToHost)){
-			CheckCudaError("Memory Transfer D -> H");
+			tCheckCudaError("Memory Transfer D -> H");
 		}
 }
 
@@ -176,7 +176,7 @@ void GpuManager::InitializeAndTransferConstants(int jmax,int sym_repres,int pmax
 					double three = three_j(jI, 1, jF, kI, kF - kI, -kF);
 					//printf("(%i,%i,%i,%i) = %14.3E\n",jI,jF,kI,kF,three);
 					tmp_three_J[jI + kI*(jmax+1) +(jF-jI + 1)*(jmax+1)*(jmax+1) +  (kF-kI + 1)*(jmax+1)*(jmax+1)*3] = three;
-					Log("three-j[%i,%i,%i,%i] = %12.6f\n",jI,jF,kI,kF,tmp_three_J[jI + kI*(jmax+1) +(jF-jI + 1)*(jmax+1)*(jmax+1) +  (kF-kI + 1)*(jmax+1)*(jmax+1)*3]);
+					//Log("three-j[%i,%i,%i,%i] = %12.6f\n",jI,jF,kI,kF,tmp_three_J[jI + kI*(jmax+1) +(jF-jI + 1)*(jmax+1)*(jmax+1) +  (kF-kI + 1)*(jmax+1)*(jmax+1)*3]);
 				}	
 	
 	AllocateGpuMemory((void**)&threejsymbols,sizeof(double)*size_t((jmax+1)*(jmax+1)*3*3));
