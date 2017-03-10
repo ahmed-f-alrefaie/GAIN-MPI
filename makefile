@@ -1,7 +1,7 @@
 goal:   GAIN-MPI.x
 
 #
-MPICC = mpiicc
+MPICC = mpicc
 FORT = ifort
 NVCC = nvcc
 

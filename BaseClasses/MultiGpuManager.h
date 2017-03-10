@@ -58,8 +58,8 @@ public:
 	double* GetInitialVector();
 	double* GetFinalVector(int proc_id);
 	double* GetLinestrength(int proc_id);
-	static void PinVectorMemory(double* vector,int n);
-	static void UnpinVectorMemory(double* vector,int n);
+	static void PinVectorMemory(double* vector,size_t n);
+	static void UnpinVectorMemory(double* vector,size_t n);
 	//update eigenvectors
 	void UpdateEigenVector();
 	void UpdateEigenVector(int proc_id);

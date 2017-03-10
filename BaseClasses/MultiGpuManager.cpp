@@ -2,11 +2,14 @@
 #include <climits>
 #pragma once
 
-void MultiGpuManager::PinVectorMemory(double* vector,int n){
-	cudaHostRegister(vector,size_t(n)*sizeof(double),cudaHostRegisterPortable);
+void MultiGpuManager::PinVectorMemory(double* vector,size_t n){
+	if(cudaSuccess != cudaHostRegister(vector,size_t(n)*sizeof(double),cudaHostRegisterPortable)){
+		//CheckCudaError("Pinning Memory");
+		//LogErrorAndAbort("Trouble, could not pin memory");
+	}
 }
 
-void MultiGpuManager::UnpinVectorMemory(double* vector,int n){
+void MultiGpuManager::UnpinVectorMemory(double* vector,size_t n){
 	cudaHostUnregister(vector);
 }
 
@@ -50,6 +53,7 @@ MultiGpuManager::MultiGpuManager(std::vector<int> jvals,States* states,int nproc
 	}
 	
 	if(allowed_gpus <= 0){
+
 		
 	}
 	
@@ -69,6 +73,13 @@ MultiGpuManager::MultiGpuManager(std::vector<int> jvals,States* states,int nproc
 
 
 	VerboseLog("We have found and will utilize %d GPUs\n",total_gpus_assigned);
+	
+	if(total_gpus_assigned <= 0) {
+
+		VerboseLog("\nNo free gpu available!!!!\n");
+		LogErrorAndAbort("No GPU available for this process, number of process must equal number of gpus, maybe someone stole it?");
+
+	}
 
 	m_states = states;
 	m_jvals = jvals;
@@ -125,7 +136,7 @@ void MultiGpuManager::TransferDipole(Dipole* dipole_)
 	}else{
 		//Lets pin the memory for further transfers
 		for(int i = 0; i < m_dipole->GetNumBlocks(); i++){
-			PinVectorMemory(m_dipole->GetDipolePiece(i),m_dipole->GetDipoleSizeBytes(i));
+			PinVectorMemory(m_dipole->GetDipolePiece(i),m_dipole->GetDipoleSize(i));
 		}
 
 	}
