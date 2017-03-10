@@ -117,7 +117,7 @@ void GpuManager::TransferToGpu(void* dst,const void* src,size_t size){
 void GpuManager::TransferToHost(void* dst,const void* src,size_t size){
 		cudaSetDevice(gpu_id);
 		if(cudaSuccess != cudaMemcpy(dst,src,size,cudaMemcpyDeviceToHost)){
-			tCheckCudaError("Memory Transfer D -> H");
+			CheckCudaError("Memory Transfer D -> H");
 		}
 }
 
