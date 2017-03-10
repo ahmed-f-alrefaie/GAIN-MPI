@@ -18,6 +18,7 @@ int MultiGpuManager::GetFreeDevice(){
 
 	int devCount;
 	cudaGetDeviceCount(&devCount);
+	Log("Total devices = %d\n",devCount); 
 	for(device_num; device_num< devCount; device_num++){
 		cudaSetDevice(device_num );
 		if(cudaFree(0)==cudaSuccess){
