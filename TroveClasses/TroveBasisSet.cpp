@@ -606,10 +606,13 @@ void TroveBasisSet::Correlate(){
 		delete[] Nirreps;
 		delete []count_indexI;
 		*/
-
-		wigner.push_back({0,0,0});
-		wigner.push_back({0,0,0});
-		wigner.push_back({0,0,0});
+		Wigner zero_wig;
+		zero_wig.rot = 0;
+		zero_wig.nlevelsF = 0;
+		zero_wig.nlevelsI = 0;
+		wigner.push_back(zero_wig);
+		wigner.push_back(zero_wig);
+		wigner.push_back(zero_wig);
 		int sym_maxdegen=0;
 		for(int i = 0; i < sym_nrepres; i++){
 			sym_maxdegen=std::max(sym_maxdegen,sym_degen[i]);
