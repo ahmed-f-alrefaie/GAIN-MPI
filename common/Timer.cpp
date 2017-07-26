@@ -1,17 +1,13 @@
 #include "Timer.h"
-
+#include <algorithm>
 #pragma once
 /*---------------Public METHODS--------------------------*/  
 
-int sort_time_func (const void * a, const void * b)
+bool sort_time_func (const TimeInfo &a, const TimeInfo &b)
 {
-	TimeInfo* tima,*timb;
-	tima = (TimeInfo*)a;
-	timb = (TimeInfo*)b;
 //	printf("nu a = %11.6f nu b = %11.6f\n",nu_a,nu_b);
-  if (tima->total_time_seconds >  timb->total_time_seconds ) return -1;
-  if ( tima->total_time_seconds == timb->total_time_seconds) return 0;
-	 return 1;
+ return a.total_time_seconds >  b.total_time_seconds ;
+
 };
 
 
@@ -113,7 +109,7 @@ void Timer::PrintTimerInfo(){
 	//Otherwise we get the count
 	int timer_size = time_data.size();
 	//Allocate array of that size
-	TimeInfo* temp = new TimeInfo[timer_size];
+	std::vector<TimeInfo> temp;
 	int i = 0;
   	for (std::map<std::string,TimeInfo>::iterator it=time_data.begin(); it!=time_data.end(); ++it){
     		
@@ -127,12 +123,12 @@ void Timer::PrintTimerInfo(){
 			//temp[i].average_call_time =  temp[i].total_time_seconds/(float)temp[i].calls;    			
     		}
 		//EndTimer(it->first);
-    		temp[i] = it->second;
+    		temp.push_back(it->second);
     		
     		i++;
     	}
-    	
-    	qsort(temp,timer_size,sizeof(TimeInfo),sort_time_func);
+    	std::sort(temp.begin(),temp.end(),sort_time_func);
+    	//qsort(temp,timer_size,sizeof(TimeInfo),sort_time_func);
     	//Print out timer information
     	printf("--------------------------------------------------------------------------------------------\n");
     	printf("--                                   Timer Data                                           --\n");
@@ -152,7 +148,7 @@ void Timer::PrintTimerInfo(){
     	printf("---------------------------------------------------------------------------\n");
     	printf("---------------------------------------------------------------------------\n");
     	
-    	delete[] temp;
+    	//delete[] temp;
 
 
 
