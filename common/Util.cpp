@@ -103,7 +103,7 @@ size_t ReadFortranRecord(FILE* IO, void* data_ptr) {
 	read_records += file_record_size;
     	//Read last 4 bytes of record
         fread(&file_record_size, 4, 1, IO);
-        return file_record_size;
+        return read_records;
         
 }
 
