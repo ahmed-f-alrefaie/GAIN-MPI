@@ -38,7 +38,7 @@ void TroveDipole::InitDipole(size_t avail_mem){
 	
 	MaxContracts = ncontr_t;
 
-   	rootsize2 = ncontr_t*ncontr_t;
+   	rootsize2 = size_t(ncontr_t)*size_t(ncontr_t);
 	matsize = rootsize2*3;
 	dipole_size = matsize;
 	size_t total_mat_bytes = matsize*sizeof(double);
@@ -58,7 +58,8 @@ void TroveDipole::InitDipole(size_t avail_mem){
 			
 		}
 		
-		ReadFortranRecord(extF, (temp_dipole) + i*rootsize2);
+		size_t read_records = ReadFortranRecord(extF, (temp_dipole) + i*rootsize2);
+		Log("Expected %zu bytes, actually read %zu bytes\n",rootsize2*8l,read_records);
 				
 			 
 	}
@@ -79,17 +80,17 @@ void TroveDipole::InitDipole(size_t avail_mem){
 		//		printf("dipole[%i,%i,%i] = %16.8e\n",i,j,k,(*dipole_me)[i + j*ncontr_t + k*ncontr_t*ncontr_t]);
 	//exit(0);
 	#endif
-	int n_contr_block = ceil(float(ncontr_t)/float(num_blocks));
+	size_t n_contr_block = ceil(float(ncontr_t)/float(num_blocks));
 	int cur_block_size = 0;
-	int startF=0,endF=0,ncontrF=0;
+	size_t startF=0,endF=0,ncontrF=0;
 
 	//Trove creates dipoles in reversed order so we need to flip them
 	Log("Flipping dipole...and blocking into %i pieces\n",num_blocks);
-	for(int blocks = 0; blocks < num_blocks; blocks++){
+	for(size_t blocks = 0; blocks < num_blocks; blocks++){
 		startF=blocks*n_contr_block;
 		
 		endF = (blocks+1)*n_contr_block;
-		endF = std::min(endF,ncontr_t);
+		endF = std::min(endF,size_t(ncontr_t));
 		ncontrF = endF-startF;
 		dipole_me.push_back(DipolePiece());
 		//Allocate the dipole
@@ -101,9 +102,9 @@ void TroveDipole::InitDipole(size_t avail_mem){
 		Log("Size of block %i is %zu\n",blocks,dipole_me.back().size);
 		dipole_me.back().ncontrF = ncontrF;
 		Log("startF =%i, block number = %i, n_contr_block = %i\n",startF,blocks,ncontrF);
-		for(int i = 0; i < ncontr_t; i++)
-			for(int f = startF; f < endF; f++)
-				for(int k = 0; k < 3; k++)
+		for(size_t i = 0; i < ncontr_t; i++)
+			for(size_t f = startF; f < endF; f++)
+				for(size_t k = 0; k < 3; k++)
 					dipole_me.back().dipole_me[f-startF + i*ncontrF + k*ncontr_t*ncontrF] = temp_dipole[i + f*ncontr_t + k*ncontr_t*ncontr_t]; 
 
 	}
