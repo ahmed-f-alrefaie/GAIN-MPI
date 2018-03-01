@@ -85,14 +85,26 @@ std::vector<std::string> split(std::string const &input) {
 }
 
 
-void ReadFortranRecord(FILE* IO, void* data_ptr) {
+size_t ReadFortranRecord(FILE* IO, void* data_ptr) {
         unsigned int file_record_size = 0;
+	size_t read_records = 0;
         //Read the first 4 bytes
         fread(&file_record_size, 4, 1, IO);
-        //Read the output to the data pointer
-        fread(data_ptr, file_record_size, 1, IO);
-        //Read last 4 bytes of record
+	while(file_record_size == 0x80000009){
+		size_t record_secret_sauce = (0x7fffffff-8);
+		fread(data_ptr, record_secret_sauce, 1, IO);
+		read_records += record_secret_sauce;
+		data_ptr += record_secret_sauce ;
+		fread(&file_record_size, 4, 1, IO);
+		fread(&file_record_size, 4, 1, IO);
+
+	}
+	fread(data_ptr, file_record_size, 1, IO);
+	read_records += file_record_size;
+    	//Read last 4 bytes of record
         fread(&file_record_size, 4, 1, IO);
+        return file_record_size;
+        
 }
 
 void wrapvalue(unsigned long int & var, unsigned long int min,unsigned long int max){if(var >= max) var=min;}

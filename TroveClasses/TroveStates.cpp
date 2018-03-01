@@ -78,11 +78,17 @@ void TroveStates::ReadJGStates(int jVal,int gamma,int jInd){
 	nsize_max = std::max(nsize_max,dim_basis);
 	Log("J=%i nroots = %i, dim_basis = %i\n",jVal,nroots_t,dim_basis);
 
+	bool valid_file = false;
 
 	while(getline(descr_file,line)){
 
 				//If we hit the signiture then we are done
-				if(trim(line).compare("End Quantum numbers and energies")==0 || descr_file.eof())
+				if(trim(line).compare("End Quantum numbers and energies")==0){
+						valid_file = true;
+						break;
+				}
+
+				if(descr_file.eof())
 					break;
 	
 				int irec = strtol(line.c_str(),&line_ptr,0)-1;//irec
@@ -119,6 +125,11 @@ void TroveStates::ReadJGStates(int jVal,int gamma,int jInd){
 
 					
 	descr_file.close();					
+
+	if(!valid_file){
+		LogErrorAndAbort("Description file not complete! Footer not present!!!\n");
+	}
+	
 
 	delete[] ktau_rot;
 };

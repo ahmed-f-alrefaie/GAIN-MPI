@@ -30,7 +30,7 @@ std::string &trim(std::string &s);
 
 std::vector<std::string> split(std::string const &input);
 
-void ReadFortranRecord(FILE* IO, void* data_ptr);
+size_t ReadFortranRecord(FILE* IO, void* data_ptr);
 double readd();
 int readi();
 char* readc();
