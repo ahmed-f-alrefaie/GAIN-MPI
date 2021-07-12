@@ -425,6 +425,8 @@ void TroveBasisSet::Correlate(){
 	  	k_block_size= new int[jval+1];
 	   	kstart= new int[jval+1];
 		kstart[0]=0;
+		for (int i=0; i< jval+1; i++) k_block_size[i]=0;
+		for (int i=0; i< jval+1; i++) kstart[i]=0;
 	}
 	
 /*	       do iroot = 1, bset_contr(jind)%Maxcontracts
