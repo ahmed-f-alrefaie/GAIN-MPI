@@ -66,6 +66,7 @@ bool States::FilterIntensity(int I, int F){
 		nu_if <= freq_window[1] &&
 		filter_lower(eig_i->energy,gammaI) &&
 		filter_upper(eig_f->energy,gammaF) &&
+		( jF != maxJ || jI !=maxJ ) &&
 		isym_pairs[gammaI]==isym_pairs[gammaF] &&
 		igamma_pair[gammaI]==gammaF &&
 		abs(jF-jI)<=1		    &&

@@ -16,7 +16,7 @@ git clone https://github.com/ahmed-f-alrefaie/GAIN-MPI.git
 cd GAIN-MPI
 ```
 
-Then use the wilkes to makefile and make:
+Then copy the wilkes2 makefile and make:
 
 ```
 cp makefile.wilkes2 makefile
