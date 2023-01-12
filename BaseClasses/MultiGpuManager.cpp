@@ -22,7 +22,7 @@ int MultiGpuManager::GetFreeDevice(){
 	for(device_num; device_num< devCount; device_num++){
 		cudaSetDevice(device_num );
 		if(cudaFree(0)==cudaSuccess){
-			cudaThreadExit();
+			cudaDeviceReset();
 			return device_num++;
 		}	
 	}

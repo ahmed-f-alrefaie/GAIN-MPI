@@ -11,8 +11,8 @@ void TroveDipole::InitDipole(size_t avail_mem){
 	max_size = avail_mem;
 
 	char buff[20];
-	int imu,imu_t;
-	int ncontr_t;
+	size_t imu,imu_t;
+    size_t ncontr_t;
    	size_t matsize,rootsize,rootsize_t,rootsize2;
 	FILE* extF = fopen("j0_extfield.chk","r");
 

@@ -28,10 +28,11 @@
 bool fexists(const char *filename)
 {
   std::ifstream ifile(filename);
-  return ifile;
+  return ifile.good();
 }
 
-void destroy_arr_valid(void** ptr)
+template<typename T>
+void destroy_arr_valid(T** ptr)
 {
 	if(*ptr!= NULL)
 	{
