@@ -47,11 +47,11 @@ void TroveDipole::InitDipole(size_t avail_mem){
 	Log("We need to split the matrix into %d blocks\n",num_blocks);
 	double* temp_dipole = new double[matsize];
 	//(*dipole_me) = new double[matsize];
-	int contr_div = ceil(float(ncontr_t)/float(num_blocks));	
-	for(int i = 0 ; i< 3; i++)
+	size_t contr_div = ceil(float(ncontr_t)/float(num_blocks));	
+	for(size_t i = 0 ; i< 3; i++)
 	{
 		ReadFortranRecord(extF, &imu_t);
-		if(imu_t != (i+1))
+		if(int(imu_t) != int(i+1))
 		{
 			LogErrorAndAbort("[read_dipole] has bogus imu - restore_vib_matrix_elements: %i /= %i",imu_t,(i+1));
 			//fprintf(stderr,"[read_dipole] bogus imu");
