@@ -1,13 +1,13 @@
 goal:   GAIN-MPI.x
 
 #
-MPICC = mpiCC
-FORT = gfortran
+MPICC = mpicc
+FORT = mpif90
 NVCC = nvcc
 
 
-MPICC = mpiCC
-FORT = gfortran
+MPICC = mpicc
+FORT = mpif90
 NVCC = nvcc
 NVCCFLAGS = --ptxas-options=-v -O3 -Xptxas -v -lineinfo
 #NVCCFLAGS = --ptxas-options=-v -G -g -O0 -Xptxas -v -lineinfo
@@ -30,7 +30,7 @@ C_FORT_LIB = -lgfortran
 
 
 CCFLAGS := $(CCFLAGS) -DKEPLER
-NVCCFLAGS := $(NVCCFLAGS) -arch sm_80 -DKEPLER
+NVCCFLAGS := $(NVCCFLAGS) -DKEPLER
 PLAT = KEPLER
 
 
@@ -54,7 +54,7 @@ OBJ = BaseProcess.o Util.o Timer.o BaseManager.o TroveDipole.o \
 
 
 GAIN-MPI.x:       $(OBJ) main.o
-	$(MPICC) -o GAIN-MPI_$(PLAT).x $(OBJ) $(CCFLAGS) main.o $(LIB)  $(CUDA_INC)
+	$(MPICC) -o GAIN-MPI_AMPERE.x $(OBJ) $(CCFLAGS) main.o $(LIB)  $(CUDA_INC)
 #CPP
 main.o:       main.cpp
 	$(MPICC) -c main.cpp $(CCFLAGS) $(CUDA_INC)
