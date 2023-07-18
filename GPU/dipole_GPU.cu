@@ -658,8 +658,8 @@ const double* vector,double*  half_ls)
 	int irootF=blockIdx.x*blockDim.x + threadIdx.x;
 	int icontrI,irdegI,irlevelI,icontrF,irlevelF,irdegF,irootI;
 	
-	int dipole_idx = ncontrF*dip_stride_1;	
-	int wigner_idx;
+	size_t dipole_idx = size_t(ncontrF)*size_t(dip_stride_1);	
+	size_t wigner_idx;
 	bool valid = false;
 	if(irootF<dimenF){
 		valid = true;
@@ -689,7 +689,7 @@ const double* vector,double*  half_ls)
 				dip_1 = dipole_me[icontrF + icontrI]; //(icontrF,icontrI,1)
 				dip_2 = dipole_me[icontrF + icontrI +   dipole_idx]; //(icontrF,icontrI,2)
 				dip_3 = dipole_me[icontrF + icontrI +   dipole_idx + dipole_idx]; //(icontrF,icontrI,3)
-				wigner_idx = irlevelI*3 + irlevelF*nlevelI*3 + irdegI*nlevelI*nlevelF*3 + irdegF*sym_max_degen*nlevelI*nlevelF*3;				
+				wigner_idx = size_t(irlevelI)*3l + size_t(irlevelF)*size_t(nlevelI)*3l + size_t(irdegI)*size_t(nlevelI)*size_t(nlevelF)*3l + size_t(irdegF)*size_t(sym_max_degen)*size_t(nlevelI)*size_t(nlevelF)*3l;				
 				
 				//[n + ilevelI*3 + ilevelF*wigner.back().nlevelsI*3 + idegI*wigner.back().nlevelsF*wigner.back().nlevelsI*3
 				//					+ idegF*sym_maxdegen*wigner.back().nlevelsF*wigner.back().nlevelsI*3]
