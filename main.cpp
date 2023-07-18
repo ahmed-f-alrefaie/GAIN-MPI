@@ -261,24 +261,7 @@ int main(int argc, char** argv){
 
 		if(expected_process == rank)
 			m_gpu->ExecuteHalfLs(iLevelI,indI,ndegI,gammaI,gammaFPair);
-		/*	
-		for(int indF = 0; indF < nJ; indF++){
 
-				if(!m_states->FilterAnyTransitionsFromJ(iLevelI,m_jvals[indF]))
-						continue;
-
-					for(int idegI = 0; idegI < ndegI; idegI++){		
-						//if(!m_states->DegeneracyFilter(gammaI,p_igammaF,idegI,0))
-						//	continue;	
-						if(expected_process == rank){
-							//Do halflinestrength
-							m_gpu->ExecuteHalfLs(indI,indF,idegI,gammaI);
-						}
-
-					}
-					//MPI_Abort(MPI_COMM_WORLD,0);
-		}
-		*/	
 		//If we've already done it then just ignore
 		for(int indF = 0; indF < nJ; indF++){
 					//Broadcast

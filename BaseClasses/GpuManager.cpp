@@ -439,7 +439,7 @@ void GpuManager::TransferWigner(int dimen,int* root,double* peigenvect){
 void GpuManager::TransferWigner(std::vector<Wigner> p_wigner){
 	if(!rotsym_do)
 		return;
-	Log("Transfering wigner");
+	Log("Transfering wigner, %d elements\n",p_wigner.size());
 	gpu_Wigner.push_back(std::vector<Wigner>());
 	for(int i = 0; i < p_wigner.size(); i++){
 		Wigner tmp_wigner;
@@ -452,9 +452,10 @@ void GpuManager::TransferWigner(std::vector<Wigner> p_wigner){
 		}else{
 			tmp_wigner.nlevelsI = p_wigner[i].nlevelsI;
 			tmp_wigner.nlevelsF = p_wigner[i].nlevelsF;
-
-			AllocateGpuMemory((void**)&tmp_wigner.rot,sizeof(double)*tmp_wigner.nlevelsI*tmp_wigner.nlevelsF*MaxDegen*MaxDegen*3);
-			TransferToGpu(tmp_wigner.rot,p_wigner[i].rot,sizeof(double)*tmp_wigner.nlevelsI*tmp_wigner.nlevelsF*MaxDegen*MaxDegen*3);
+			size_t factor = size_t(tmp_wigner.nlevelsI)*size_t(tmp_wigner.nlevelsF)*size_t(MaxDegen)*size_t(MaxDegen)*3l;
+			Log("Wigner %d has %d levelsI and %d levelsF, allocating %12.6f MB, factor %d\n",i,tmp_wigner.nlevelsI,tmp_wigner.nlevelsF,double(factor)*sizeof(double)*1e-6, factor);
+			AllocateGpuMemory((void**)&tmp_wigner.rot,sizeof(double)*factor);
+			TransferToGpu(tmp_wigner.rot,p_wigner[i].rot,sizeof(double)*factor);
 
 
 		}		
@@ -542,6 +543,7 @@ void GpuManager::UpdateEigenVector(int proc_id){
 void GpuManager::ExecuteRotSymHalfLs(int indI,int indF,int idegI,int igammaI)
 {
 
+	//Log("Executing RotSym Half-linestrength on gpu %d\n", gpu_id);
 	cudaSetDevice(gpu_id);
 
 	int dJ = basisSets[indF].J - basisSets[indI].J + 1;
@@ -553,6 +555,7 @@ void GpuManager::ExecuteRotSymHalfLs(int indI,int indF,int idegI,int igammaI)
 		LogErrorAndAbort("Wigner has a problem\n");
 	}
 	cudaStreamWaitEvent(half_ls_stream[indF][idegI][0],transfer_dipole_event,0);
+	cudaDeviceSynchronize();
 	//Execute
 	compute_gpu_half_linestrength_rotsym_(
 			basisSets[indF].dimensions,
@@ -585,7 +588,8 @@ void GpuManager::ExecuteRotSymHalfLs(int indI,int indF,int idegI,int igammaI)
 			half_ls_stream[indF][idegI][0]);
 	cudaEventRecord(completed_half_ls_event[indF][idegI][0],half_ls_stream[indF][idegI][0]);
 	cudaStreamWaitEvent(transfer_half_ls_stream[indF][idegI],completed_half_ls_event[indF][idegI][0],0);
-
+	cudaDeviceSynchronize();
+	CheckCudaError("Half-linestrength");
 
 	/*cudaDeviceSynchronize();
 	double* tmp_half_ls=new double[DimenMax];

@@ -11,7 +11,8 @@ void TroveDipole::InitDipole(size_t avail_mem){
 	max_size = avail_mem;
 
 	char buff[20];
-	size_t imu,imu_t;
+	size_t imu;
+	int ncontr_temp, imu_t;
     size_t ncontr_t;
    	size_t matsize,rootsize,rootsize_t,rootsize2;
 	FILE* extF = fopen("j0_extfield.chk","r");
@@ -32,16 +33,17 @@ void TroveDipole::InitDipole(size_t avail_mem){
 		
 	}
 	
-	ReadFortranRecord(extF, &ncontr_t);
+	ReadFortranRecord(extF, &ncontr_temp);
 	
 	/////////////////////////
-	
+	ncontr_t = size_t(ncontr_temp);
 	MaxContracts = ncontr_t;
 
    	rootsize2 = size_t(ncontr_t)*size_t(ncontr_t);
 	matsize = rootsize2*3;
 	dipole_size = matsize;
 	size_t total_mat_bytes = matsize*sizeof(double);
+	Log("Total mat bytes %d  vs max_size %d : %d\n", total_mat_bytes, max_size, total_mat_bytes > max_size);
 	num_blocks = (total_mat_bytes/max_size) + 1;
 	rootsize  = ncontr_t*(ncontr_t+1)/num_blocks;
 	Log("We need to split the matrix into %d blocks\n",num_blocks);
@@ -51,7 +53,7 @@ void TroveDipole::InitDipole(size_t avail_mem){
 	for(size_t i = 0 ; i< 3; i++)
 	{
 		ReadFortranRecord(extF, &imu_t);
-		if(int(imu_t) != int(i+1))
+		if(size_t(imu_t) != i+1)
 		{
 			LogErrorAndAbort("[read_dipole] has bogus imu - restore_vib_matrix_elements: %i /= %i",imu_t,(i+1));
 			//fprintf(stderr,"[read_dipole] bogus imu");

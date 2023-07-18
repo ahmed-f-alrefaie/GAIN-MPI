@@ -234,10 +234,11 @@ void MultiGpuManager::ExecuteHalfLs(int iLevelI,int indI,int ndegI,int igammaI,i
 				m_gpus[i]->TransformHalfLsVector(indI,indF,idegI,igammaI);
 				
 			}
-
+	
 	//Lets loop through the Dipole blocks
 	for(int i = 0; i < m_dipole->GetNumBlocks(); i++){
 		int selected_gpu = m_dipole_dist[i];
+		//Log("Executing half linestrength for block %d on GPU %d\n",i,selected_gpu);
 		//Lets wait for the GPU to finish first
 		m_gpus[selected_gpu]->WaitForDevice();
 		//Reset the half_linestrength
@@ -252,6 +253,7 @@ void MultiGpuManager::ExecuteHalfLs(int iLevelI,int indI,int ndegI,int igammaI,i
 				//Execute the half linestrength
 				if(!m_states->DegeneracyFilter(igammaI,igammaF,idegI,0)) continue;
 				m_gpus[selected_gpu]->ExecuteHalfLs(indI,indF, idegI,igammaI);
+				
 			}
 		}
 	}
