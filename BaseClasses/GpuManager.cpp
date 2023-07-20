@@ -443,6 +443,7 @@ void GpuManager::TransferWigner(std::vector<Wigner> p_wigner){
 	gpu_Wigner.push_back(std::vector<Wigner>());
 	for(int i = 0; i < p_wigner.size(); i++){
 		Wigner tmp_wigner;
+		tmp_wigner.rot = NULL;
 		
 		if(p_wigner[i].rot == NULL){
 			tmp_wigner.rot = NULL;
@@ -453,16 +454,18 @@ void GpuManager::TransferWigner(std::vector<Wigner> p_wigner){
 			tmp_wigner.nlevelsI = p_wigner[i].nlevelsI;
 			tmp_wigner.nlevelsF = p_wigner[i].nlevelsF;
 			size_t factor = size_t(tmp_wigner.nlevelsI)*size_t(tmp_wigner.nlevelsF)*size_t(MaxDegen)*size_t(MaxDegen)*3l;
-			Log("Wigner %d has %d levelsI and %d levelsF, allocating %12.6f MB, factor %d\n",i,tmp_wigner.nlevelsI,tmp_wigner.nlevelsF,double(factor)*sizeof(double)*1e-6, factor);
+			Log("Wigner %d has %d levelsI and %d levelsF, allocating %12.6f MB, factor %d %p\n",i,tmp_wigner.nlevelsI,tmp_wigner.nlevelsF,double(factor)*sizeof(double)*1e-6, factor, tmp_wigner.rot);
+
 			AllocateGpuMemory((void**)&tmp_wigner.rot,sizeof(double)*factor);
 			TransferToGpu(tmp_wigner.rot,p_wigner[i].rot,sizeof(double)*factor);
+			Log("Wigner %d has %d levelsI and %d levelsF, allocating %12.6f MB, factor %d %p\n",i,tmp_wigner.nlevelsI,tmp_wigner.nlevelsF,double(factor)*sizeof(double)*1e-6, factor, tmp_wigner.rot);
 
 
 		}		
 		
 
 
-		gpu_Wigner.back().push_back(tmp_wigner);
+		gpu_Wigner.back().push_back(Wigner {tmp_wigner.rot,tmp_wigner.nlevelsI,tmp_wigner.nlevelsF});
 
 
 
@@ -556,6 +559,7 @@ void GpuManager::ExecuteRotSymHalfLs(int indI,int indF,int idegI,int igammaI)
 	}
 	cudaStreamWaitEvent(half_ls_stream[indF][idegI][0],transfer_dipole_event,0);
 	cudaDeviceSynchronize();
+
 	//Execute
 	compute_gpu_half_linestrength_rotsym_(
 			basisSets[indF].dimensions,

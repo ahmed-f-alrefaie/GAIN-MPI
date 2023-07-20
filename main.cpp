@@ -175,6 +175,10 @@ int main(int argc, char** argv){
 		MPI_Barrier( MPI_COMM_WORLD);
 	}
 	
+	//Handle dipole
+	m_dipole = new TroveDipole();
+
+	m_gpu->TransferDipole(m_dipole);
 	
 
 	for(int i = 0; i < m_input->GetNJ(); i++){
@@ -198,10 +202,7 @@ int main(int argc, char** argv){
 	m_gpu->AllocateVectors(m_input->GetNJ(),m_states->GetNSizeMax(),BasisSet::GetDimenMax());
 
 
-	//Handle dipole
-	m_dipole = new TroveDipole();
 
-	m_gpu->TransferDipole(m_dipole);
 
 
 
@@ -236,6 +237,8 @@ int main(int argc, char** argv){
 	int next_preprocess = 0;
 	for(int iLevelI = 0; iLevelI < nLevels; iLevelI++){
 		
+		int oldLevel = iLevelI;
+
 		//All MPI processes should do this
 		if(!m_states->FilterLowerState(iLevelI))
 			continue;
@@ -249,8 +252,14 @@ int main(int argc, char** argv){
 		int indexI = m_states->GetLevel(iLevelI);
 		int expected_process = eigen->ReadVector(vector_I,iLevelI,nSizeI);
 
+
+		printf("Lower state: %d %d %d %d %d %12.6f %d\n",iLevelI,jI,indI,gammaI,nSizeI,energyI,expected_process);
+
 		int gammaFPair = m_input->IgammaPair(gammaI);
 		
+		printf("Lower state: %d %d %d %d %d %12.6f %d\n",iLevelI,jI,indI,gammaI,nSizeI,energyI,expected_process);
+
+
 		m_gpu->UpdateEigenVector();
 
 		
@@ -353,7 +362,7 @@ int main(int argc, char** argv){
 
 
 		MPI_Barrier( MPI_COMM_WORLD);
-		
+		iLevelI = oldLevel;
 
 	}
 	m_output->Close();

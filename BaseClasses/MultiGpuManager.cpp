@@ -219,8 +219,15 @@ void MultiGpuManager::UpdateEigenVector(int proc_id){
 }
 
 void MultiGpuManager::TransferWigner(std::vector<Wigner> p_wigner){
-	for(int i = 0; i < m_gpus.size(); i++)
-		m_gpus[i]->TransferWigner(p_wigner);
+	//Track if the GPU already has the wigner
+	std::vector<bool> has_wigner(m_gpus.size(),false);
+	for(int i = 0; i < m_dipole->GetNumBlocks(); i++){
+		int selected_gpu = m_dipole_dist[i];
+		Log("Transferring Wigner for block %d to GPU %d\n",i,selected_gpu);
+		if (has_wigner[selected_gpu]) continue;
+		m_gpus[selected_gpu]->TransferWigner(p_wigner);
+		has_wigner[selected_gpu] = true;
+	}
 }
 
 void MultiGpuManager::ExecuteHalfLs(int iLevelI,int indI,int ndegI,int igammaI,int igammaF)
