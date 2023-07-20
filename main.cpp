@@ -253,11 +253,11 @@ int main(int argc, char** argv){
 		int expected_process = eigen->ReadVector(vector_I,iLevelI,nSizeI);
 
 
-		printf("Lower state: %d %d %d %d %d %12.6f %d\n",iLevelI,jI,indI,gammaI,nSizeI,energyI,expected_process);
+		//printf("Lower state: %d %d %d %d %d %12.6f %d\n",iLevelI,jI,indI,gammaI,nSizeI,energyI,expected_process);
 
 		int gammaFPair = m_input->IgammaPair(gammaI);
 		
-		printf("Lower state: %d %d %d %d %d %12.6f %d\n",iLevelI,jI,indI,gammaI,nSizeI,energyI,expected_process);
+		//printf("Lower state: %d %d %d %d %d %12.6f %d\n",iLevelI,jI,indI,gammaI,nSizeI,energyI,expected_process);
 
 
 		m_gpu->UpdateEigenVector();
