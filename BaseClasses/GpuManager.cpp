@@ -93,6 +93,7 @@ void GpuManager::CheckCudaError(const char* tag){
 };
 
 void GpuManager::AllocateGpuMemory(void** mem, size_t size){
+	cudaSetDevice(gpu_id);
 		if(cudaSuccess != cudaMalloc(mem,size)){
 			CheckCudaError("Memory Allocation");
 		}
